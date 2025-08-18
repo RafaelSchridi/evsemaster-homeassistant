@@ -1,0 +1,131 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "EVSEMaster Setup",
+        "description": "Set up your EVSEMaster EVSE charging station",
+        "data": {
+          "host": "Host IP Address",
+          "password": "EVSE Password (6 digits)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to EVSE",
+      "invalid_auth": "Invalid password",
+      "unknown": "Unexpected error occurred"
+    },
+    "abort": {
+      "already_configured": "Device is already configured"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "current_power": {
+        "name": "Current Power"
+      },
+      "energy": {
+        "name": "Energy"
+      },
+      "voltage_l1": {
+        "name": "Voltage L1"
+      },
+      "voltage_l2": {
+        "name": "Voltage L2"
+      },
+      "voltage_l3": {
+        "name": "Voltage L3"
+      },
+      "current_l1": {
+        "name": "Current L1"
+      },
+      "current_l2": {
+        "name": "Current L2"
+      },
+      "current_l3": {
+        "name": "Current L3"
+      },
+      "temperature_inner": {
+        "name": "Inner Temperature"
+      },
+      "temperature_outer": {
+        "name": "Outer Temperature"
+      },
+      "current_state": {
+        "name": "Current State"
+      },
+      "meta_state": {
+        "name": "Status"
+      },
+      "gun_state": {
+        "name": "Gun State"
+      },
+      "output_state": {
+        "name": "Output State"
+      },
+      "charge_session": {
+        "name": "Charge Session ID"
+      },
+      "charge_duration": {
+        "name": "Charge Duration"
+      },
+      "charge_energy": {
+        "name": "Charge Session Energy"
+      }
+    },
+    "binary_sensor": {
+      "online": {
+        "name": "Online"
+      },
+      "connected": {
+        "name": "Connected"
+      },
+      "charging": {
+        "name": "Charging"
+      },
+      "error": {
+        "name": "Error"
+      },
+      "logged_in": {
+        "name": "Logged In"
+      }
+    },
+    "switch": {
+      "charging": {
+        "name": "Charging"
+      },
+      "offline_charge": {
+        "name": "Offline Charging"
+      }
+    },
+    "button": {
+      "start_charging": {
+        "name": "Start Charging"
+      },
+      "stop_charging": {
+        "name": "Stop Charging"
+      },
+      "refresh": {
+        "name": "Refresh"
+      }
+    },
+    "number": {
+      "max_current": {
+        "name": "Maximum Current"
+      }
+    },
+    "text": {
+      "name": {
+        "name": "Name"
+      }
+    },
+    "select": {
+      "language": {
+        "name": "Language"
+      },
+      "temperature_unit": {
+        "name": "Temperature Unit"
+      }
+    }
+  }
+}

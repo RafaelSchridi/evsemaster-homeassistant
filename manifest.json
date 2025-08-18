@@ -1,0 +1,17 @@
+{
+  "domain": "evsemaster",
+  "name": "EVSEMaster",
+  "codeowners": [
+    "@RafaelSchridi"
+  ],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://www.home-assistant.io/integrations/evsemaster",
+  "homekit": {},
+  "iot_class": "local_push",
+  "quality_scale": "bronze",
+  "requirements": [],
+  "ssdp": [],
+  "zeroconf": [],
+  "version": "1.0.0"
+}
