@@ -20,15 +20,15 @@ _LOGGER = logging.getLogger(__name__)
 class DeviceSchema(BaseSchema):
     """Schema for EVSE device information."""
 
-    manufacturer: str = "Unknown"
-    model: str = "Unknown EVSE"
+    manufacturer: str = "Manufacturer"
+    model: str = "EVSE"
     serial_number: str = "unknown"
 
     def get_attr_device_info(self) -> dict[str, Any]:
         """Return device info for Home Assistant."""
         return {
             "identifiers": {(DOMAIN, self.serial_number)},
-            "name": f"{self.manufacturer} {self.model}",
+            "name": f"{self.model}", # manufacturer + model or just model?
             "manufacturer": self.manufacturer,
             "model": self.model,
             "serial_number": self.serial_number,

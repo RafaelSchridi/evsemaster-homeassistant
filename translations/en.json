@@ -1,0 +1,60 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "EVSEMaster Setup",
+        "description": "Set up your EVSEMaster EVSE charging station",
+        "data": {
+          "host": "Host IP Address",
+          "password": "EVSE Password (6 digits)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to EVSE",
+      "invalid_auth": "Invalid password",
+      "unknown": "Unexpected error occurred"
+    },
+    "abort": {
+      "already_configured": "Device is already configured"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "current_state": {
+        "name": "Current State"
+      },
+      "current_power": {
+        "name": "Current Power"
+      },
+      "plug_state": {
+        "name": "Plug State"
+      },
+      "inner_temperature": {
+        "name": "Inner Temperature"
+      },
+      "outer_temperature": {
+        "name": "Outer Temperature"
+      },
+      "total_kwh": {
+        "name": "Total kWh"
+      }
+    },
+    "binary_sensor": {
+      "plug_state": {
+        "name": "Plug State"
+      },
+      "charging_state": {
+        "name": "Charging State"
+      }
+    },
+    "button": {
+      "start_charging": {
+        "name": "Start Charging"
+      },
+      "stop_charging": {
+        "name": "Stop Charging"
+      }
+    }
+  }
+}

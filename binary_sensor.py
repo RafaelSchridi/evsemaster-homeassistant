@@ -1,4 +1,4 @@
-"""Binary sensor platform for EVSEMaster integration."""
+"""Binary sensors for EVSEMaster (minimal)."""
 
 from __future__ import annotations
 
@@ -11,8 +11,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
-from .coordinator import EVSEMasterDataUpdateCoordinator
+from .coordinator import EVSEMasterDataUpdateCoordinator, DataSchema
+from .evsemaster.data_types import EvseStatus, PlugStateEnum, CurrentStateEnum
 
 
 async def async_setup_entry(
@@ -20,155 +20,58 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the binary sensor platform."""
+    """Set up minimal binary sensors: plugged-in and charging."""
     coordinator: EVSEMasterDataUpdateCoordinator = entry.runtime_data
-    
-    entities = []
-    
-    for evse_serial, evse_data in coordinator.data.items():
-        entities.extend([
-            EVSEOnlineBinarySensor(coordinator, evse_serial),
-            EVSEConnectedBinarySensor(coordinator, evse_serial),
-            EVSEChargingBinarySensor(coordinator, evse_serial),
-            EVSEErrorBinarySensor(coordinator, evse_serial),
-            EVSELoggedInBinarySensor(coordinator, evse_serial),
-        ])
-    
+
+    entities: list[BinarySensorEntity] = []
+    entities.append(EVSEPluggedInBinarySensor(coordinator))
+    entities.append(EVSEChargingBinarySensor(coordinator))
+
     async_add_entities(entities)
 
 
-class EVSEBaseBinarySensor(CoordinatorEntity[EVSEMasterDataUpdateCoordinator]):
-    """Base class for EVSE binary sensors."""
+class _Base(CoordinatorEntity[EVSEMasterDataUpdateCoordinator]):
+    _attr_has_entity_name = True
 
-    def __init__(
-        self,
-        coordinator: EVSEMasterDataUpdateCoordinator,
-        evse_serial: str,
-        sensor_type: str,
-    ) -> None:
-        """Initialize the binary sensor."""
+    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
         super().__init__(coordinator)
-        self.evse_serial = evse_serial
-        self.sensor_type = sensor_type
-        
-        evse_data = coordinator.data.get(evse_serial, {})
-        info = evse_data.get("info", {})
-        brand = info.get("brand", "Unknown")
-        model = info.get("model", "EVSE")
-        
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, evse_serial)},
-            "name": f"{brand} {model}",
-            "manufacturer": brand,
-            "model": model,
-            "serial_number": evse_serial,
-        }
+        self._attr_device_info = coordinator.data.device.get_attr_device_info()
 
     @property
-    def evse_data(self) -> dict:
-        """Get EVSE data from coordinator."""
-        return self.coordinator.data.get(self.evse_serial, {})
+    def entry(self) -> DataSchema:
+        return self.coordinator.data
 
 
-class EVSEOnlineBinarySensor(EVSEBaseBinarySensor, BinarySensorEntity):
-    """Binary sensor for EVSE online status."""
+class EVSEPluggedInBinarySensor(_Base, BinarySensorEntity):
+    _attr_translation_key = "plug_state"
+    _attr_device_class = BinarySensorDeviceClass.PLUG
 
-    def __init__(
-        self, coordinator: EVSEMasterDataUpdateCoordinator, evse_serial: str
-    ) -> None:
-        """Initialize the binary sensor."""
-        super().__init__(coordinator, evse_serial, "online")
-        self._attr_unique_id = f"{evse_serial}_online"
-        self._attr_name = "Online"
-        self._attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
+
+    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        serial = self.entry.device.serial_number
+        self._attr_unique_id = f"{serial}_plug_state_binary"
 
     @property
-    def is_on(self) -> bool | None:
-        """Return true if EVSE is online."""
-        return self.evse_data.get("isOnline", False)
+    def is_on(self) -> bool:
+        status: EvseStatus | None = self.entry.status
+        if status:
+            return status.plug_state != PlugStateEnum.DISCONNECTED
+        return False
 
 
-class EVSEConnectedBinarySensor(EVSEBaseBinarySensor, BinarySensorEntity):
-    """Binary sensor for EVSE connection status."""
+class EVSEChargingBinarySensor(_Base, BinarySensorEntity):
+    _attr_translation_key = "charging_state"
+    _attr_device_class = BinarySensorDeviceClass.BATTERY_CHARGING
 
-    def __init__(
-        self, coordinator: EVSEMasterDataUpdateCoordinator, evse_serial: str
-    ) -> None:
-        """Initialize the binary sensor."""
-        super().__init__(coordinator, evse_serial, "connected")
-        self._attr_unique_id = f"{evse_serial}_connected"
-        self._attr_name = "Connected"
-        self._attr_device_class = BinarySensorDeviceClass.PLUG
-
-    @property
-    def is_on(self) -> bool | None:
-        """Return true if a vehicle is connected."""
-        state = self.evse_data.get("state", {})
-        gun_state = state.get("gunState")
-        return gun_state not in [None, "DISCONNECTED"]
-
-
-class EVSEChargingBinarySensor(EVSEBaseBinarySensor, BinarySensorEntity):
-    """Binary sensor for EVSE charging status."""
-
-    def __init__(
-        self, coordinator: EVSEMasterDataUpdateCoordinator, evse_serial: str
-    ) -> None:
-        """Initialize the binary sensor."""
-        super().__init__(coordinator, evse_serial, "charging")
-        self._attr_unique_id = f"{evse_serial}_charging"
-        self._attr_name = "Charging"
-        self._attr_device_class = BinarySensorDeviceClass.BATTERY_CHARGING
+    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        serial = self.entry.device.serial_number
+        self._attr_unique_id = f"{serial}_charging_binary"
 
     @property
-    def is_on(self) -> bool | None:
-        """Return true if EVSE is currently charging."""
-        meta_state = self.evse_data.get("metaState")
-        return meta_state == "CHARGING"
-
-
-class EVSEErrorBinarySensor(EVSEBaseBinarySensor, BinarySensorEntity):
-    """Binary sensor for EVSE error status."""
-
-    def __init__(
-        self, coordinator: EVSEMasterDataUpdateCoordinator, evse_serial: str
-    ) -> None:
-        """Initialize the binary sensor."""
-        super().__init__(coordinator, evse_serial, "error")
-        self._attr_unique_id = f"{evse_serial}_error"
-        self._attr_name = "Error"
-        self._attr_device_class = BinarySensorDeviceClass.PROBLEM
-
-    @property
-    def is_on(self) -> bool | None:
-        """Return true if EVSE has errors."""
-        state = self.evse_data.get("state", {})
-        errors = state.get("errors", [])
-        return len(errors) > 0
-
-    @property
-    def extra_state_attributes(self) -> dict:
-        """Return error details as attributes."""
-        state = self.evse_data.get("state", {})
-        errors = state.get("errors", [])
-        return {
-            "error_count": len(errors),
-            "errors": errors,
-        }
-
-
-class EVSELoggedInBinarySensor(EVSEBaseBinarySensor, BinarySensorEntity):
-    """Binary sensor for EVSE login status."""
-
-    def __init__(
-        self, coordinator: EVSEMasterDataUpdateCoordinator, evse_serial: str
-    ) -> None:
-        """Initialize the binary sensor."""
-        super().__init__(coordinator, evse_serial, "logged_in")
-        self._attr_unique_id = f"{evse_serial}_logged_in"
-        self._attr_name = "Logged In"
-
-    @property
-    def is_on(self) -> bool | None:
-        """Return true if logged in to EVSE."""
-        return self.evse_data.get("isLoggedIn", False)
+    def is_on(self) -> bool:
+        status: EvseStatus | None = self.entry.status
+        if status:
+            return status.current_state == CurrentStateEnum.CHARGING
+        return False
