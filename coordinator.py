@@ -12,8 +12,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
-from .evsemaster.evse_protocol import SimpleEVSEProtocol
-from .evsemaster.data_types import EvseStatus, ChargingStatus,BaseSchema
+from evsemaster.evse_protocol import SimpleEVSEProtocol
+from evsemaster.data_types import EvseStatus, ChargingStatus,BaseSchema
 
 _LOGGER = logging.getLogger(__name__)
 

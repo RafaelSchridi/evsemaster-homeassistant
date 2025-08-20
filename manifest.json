@@ -4,6 +4,7 @@
   "codeowners": [
     "@RafaelSchridi"
   ],
+  "integration_type": "device",
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/RafaelSchridi/evsemaster-homeassistant",
