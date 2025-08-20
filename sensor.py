@@ -15,7 +15,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN  # noqa: F401
 from .coordinator import EVSEMasterDataUpdateCoordinator,DataSchema
-from .evsemaster.data_types import EvseStatus, ChargingStatus, CurrentStateEnum,PlugStateEnum
+from evsemaster.data_types import EvseStatus,PlugStateEnum
 
 
 async def async_setup_entry(
@@ -136,7 +136,7 @@ class EVSETotalKwhSensor(_Base, SensorEntity):
     def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
         super().__init__(coordinator)
         self._attr_unique_id = f"{self.entry.device.serial_number}_total_kwh"
-        
+
     @property
     def native_value(self) -> float | None:
         status: EvseStatus = self.entry.status

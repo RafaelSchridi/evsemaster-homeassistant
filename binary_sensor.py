@@ -12,7 +12,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .coordinator import EVSEMasterDataUpdateCoordinator, DataSchema
-from .evsemaster.data_types import EvseStatus, PlugStateEnum, CurrentStateEnum
+from evsemaster.data_types import EvseStatus, PlugStateEnum, CurrentStateEnum
 
 
 async def async_setup_entry(

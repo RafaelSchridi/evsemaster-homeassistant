@@ -13,8 +13,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import DOMAIN
-# from .evse_client import EVSEClient
-from .evsemaster.evse_protocol import SimpleEVSEProtocol
+from evsemaster.evse_protocol import SimpleEVSEProtocol
 
 _LOGGER = logging.getLogger(__name__)
 

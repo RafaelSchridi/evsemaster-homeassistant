@@ -10,9 +10,9 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import DOMAIN # noqa: F401
 from .coordinator import EVSEMasterDataUpdateCoordinator,DataSchema
-from .evsemaster.data_types import EvseStatus, ChargingStatus, CurrentStateEnum
+from evsemaster.data_types import EvseStatus, CurrentStateEnum
 
 
 async def async_setup_entry(
