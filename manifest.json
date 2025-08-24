@@ -14,6 +14,6 @@
   "quality_scale": "bronze",
   "ssdp": [],
   "zeroconf": [],
-  "version": "1.0.1",
-  "requirements": ["evsemaster==1.1.0"]
+  "version": "1.0.2",
+  "requirements": []
 }

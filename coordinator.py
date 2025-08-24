@@ -12,8 +12,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
-from .evsemaster.evse_protocol import SimpleEVSEProtocol
-from .evsemaster.data_types import EvseStatus, ChargingStatus,BaseSchema,EvseDeviceInfo
+from evsemaster.evse_protocol import SimpleEVSEProtocol
+from evsemaster.data_types import EvseStatus, ChargingStatus,BaseSchema,EvseDeviceInfo
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
         proto_device = self.proto.get_latest_device_info()
         if  self.data.device != proto_device and proto_device is not None:
             self.data.device = DeviceSchema.model_validate(proto_device.model_dump())
-            
+
     def _on_protocol_event(self, event_type: str, payload: Any) -> None:
         """Receive local-push events from protocol and push to HA."""
         async def _handle() -> None:
