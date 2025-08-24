@@ -12,26 +12,22 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
-from evsemaster.evse_protocol import SimpleEVSEProtocol
-from evsemaster.data_types import EvseStatus, ChargingStatus,BaseSchema
+from .evsemaster.evse_protocol import SimpleEVSEProtocol
+from .evsemaster.data_types import EvseStatus, ChargingStatus,BaseSchema,EvseDeviceInfo
 
 _LOGGER = logging.getLogger(__name__)
 
-class DeviceSchema(BaseSchema):
-    """Schema for EVSE device information."""
-
-    manufacturer: str = "Manufacturer"
-    model: str = "EVSE"
-    serial_number: str = "unknown"
+class DeviceSchema(EvseDeviceInfo):
 
     def get_attr_device_info(self) -> dict[str, Any]:
         """Return device info for Home Assistant."""
         return {
             "identifiers": {(DOMAIN, self.serial_number)},
             "name": f"{self.model}", # manufacturer + model or just model?
-            "manufacturer": self.manufacturer,
+            "manufacturer": self.brand,
             "model": self.model,
             "serial_number": self.serial_number,
+            "hw_version": self.hardware_version,
             }
 
 class DataSchema(BaseSchema):
@@ -41,21 +37,19 @@ class DataSchema(BaseSchema):
     charging_status: ChargingStatus | None = None
     device: DeviceSchema = DeviceSchema()
 
-class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
-    """Data update coordinator for EVSEMaster."""
+class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=timedelta(seconds=10),
+            update_interval=timedelta(seconds=60),
         )
         self.entry = entry
         self.host = entry.data[CONF_HOST]
         self.password = entry.data[CONF_PASSWORD]
         self._connected = False
-        # Coordinator data layout: { serial: {"status": EvseStatus|None, "charging": ChargingStatus|None} }
         self.data: DataSchema = DataSchema()
 
         # Protocol with local-push callback
@@ -67,14 +61,14 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict[str, 
 
     def _ensure_serial(self) -> tuple[str, DataSchema]:
         """Ensure the serial number is set in the data schema."""
-        if self.data.device.serial_number != self.proto.serial_number:
-            self.data.device.serial_number = self.proto.serial_number
-
+        proto_device = self.proto.get_latest_device_info()
+        if  self.data.device != proto_device and proto_device is not None:
+            self.data.device = DeviceSchema.model_validate(proto_device.model_dump())
+            
     def _on_protocol_event(self, event_type: str, payload: Any) -> None:
         """Receive local-push events from protocol and push to HA."""
         async def _handle() -> None:
-            if self.data.device.serial_number != self.proto.serial_number:
-                self.data.device.serial_number = self.proto.serial_number
+            self._ensure_serial()
             changed = False
             if event_type == EvseStatus.__name__ and isinstance(payload, EvseStatus):
                 self.data.status = payload
