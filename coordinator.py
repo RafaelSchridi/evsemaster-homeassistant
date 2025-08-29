@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import timedelta,datetime
 import logging
 from typing import Any
 
@@ -12,8 +12,14 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
-from evsemaster.evse_protocol import SimpleEVSEProtocol
-from evsemaster.data_types import EvseStatus, ChargingStatus,BaseSchema,EvseDeviceInfo
+from .evse_loader import evse_protocol, data_types
+
+# Import specific classes from the modules
+SimpleEVSEProtocol = evse_protocol.SimpleEVSEProtocol
+EvseStatus = data_types.EvseStatus
+ChargingStatus = data_types.ChargingStatus
+BaseSchema = data_types.BaseSchema
+EvseDeviceInfo = data_types.EvseDeviceInfo
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -44,6 +50,7 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=DOMAIN,
+            config_entry=entry,
             update_interval=timedelta(seconds=60),
         )
         self.entry = entry
@@ -51,8 +58,8 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
         self.password = entry.data[CONF_PASSWORD]
         self._connected = False
         self.data: DataSchema = DataSchema()
+        self.secondary_timer = datetime.utcnow()
 
-        # Protocol with local-push callback
         self.proto = SimpleEVSEProtocol(
             host=self.host,
             password=self.password,
@@ -76,6 +83,9 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
             elif event_type == ChargingStatus.__name__ and isinstance(payload, ChargingStatus):
                 self.data.charging_status = payload
                 changed = True
+            elif event_type == EvseDeviceInfo.__name__ and isinstance(payload, EvseDeviceInfo):
+                self.data.device = DeviceSchema.model_validate(payload.model_dump())
+                changed = True
             if changed:
                 self.async_set_updated_data(self.data)
         self.hass.async_create_task(_handle())
@@ -96,8 +106,15 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
                     raise UpdateFailed("Failed to login to EVSE")
                 _LOGGER.info("Logged in to EVSE")
 
-            # Trigger a status push; listener loop will call back, but return current cache immediately
+            # data is pushed via callback; just request an update
             await self.proto.request_status()
+            # every x minutes request full device info to catch changes
+            if (self.secondary_timer + timedelta(minutes=30) < datetime.utcnow()):
+                success = await self.proto.request_essentials()
+                if not success:
+                     _LOGGER.warning("Failed to refresh device info from EVSE")
+                else:
+                    _LOGGER.info("Refreshed device info from EVSE")
 
             self._ensure_serial()
             return self.data
@@ -110,16 +127,46 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
         self._connected = False
         _LOGGER.info("EVSE client disconnected")
 
-    async def async_start_charging(self, evse_serial: str, max_amps: int = 16) -> bool:
+    async def async_start_charging(
+        self, 
+        max_amps: int | None = None,
+        start_datetime: datetime | None = None,
+        duration_hours: float | None = None,
+    ) -> bool:
+        """Start charging with advanced parameters."""
         try:
-            return await self.proto.start_charging(max_amps)
+            _LOGGER.info(
+                "Starting charging on %s: max_amps=%d, duration_hours=%s, start_datetime=%s",
+                self.data.device.serial_number, max_amps, duration_hours, start_datetime
+            )
+            minutes = None
+            if duration_hours is not None:
+                minutes = int(duration_hours * 60)
+            return await self.proto.start_charging(max_amps,start_datetime,minutes)
         except Exception as err:
-            _LOGGER.error("Error starting charging on %s: %s", evse_serial, err)
+            _LOGGER.error("Error starting advanced charging on %s: %s", self.data.device.serial_number, err)
             return False
-
-    async def async_stop_charging(self, evse_serial: str) -> bool:
+        
+    async def async_stop_charging(self) -> bool:
         try:
             return await self.proto.stop_charging()
         except Exception as err:
-            _LOGGER.error("Error stopping charging on %s: %s", evse_serial, err)
+            _LOGGER.error("Error stopping charging on %s: %s", self.data.device.serial_number, err)
+            return False
+
+
+    async def async_set_nickname(self, nickname: str) -> bool:
+        """Set device nickname."""
+        try:
+            return await self.proto.set_nickname(nickname)
+        except Exception as err:
+            _LOGGER.error("Error setting nickname on %s: %s", self.data.device.serial_number, err)
+            return False
+
+    async def async_set_max_amps(self, amperage: int) -> bool:
+        """Set maximum output amperage."""
+        try:
+            return await self.proto.set_output_amperage(amperage)
+        except Exception as err:
+            _LOGGER.error("Error setting max amperage on %s: %s", self.data.device.serial_number, err)
             return False

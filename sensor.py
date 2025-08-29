@@ -15,7 +15,11 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN  # noqa: F401
 from .coordinator import EVSEMasterDataUpdateCoordinator,DataSchema
-from evsemaster.data_types import EvseStatus,PlugStateEnum
+from .evse_loader import data_types
+
+# Import specific classes from the modules
+EvseStatus = data_types.EvseStatus
+PlugStateEnum = data_types.PlugStateEnum
 
 
 async def async_setup_entry(

@@ -22,13 +22,29 @@
   "entity": {
     "sensor": {
       "current_state": {
-        "name": "Current State"
+        "name": "Current State",
+        "state": {
+          "EVSE_FAULT": "EVSE Fault",
+          "WAITING_FOR_SWIPE": "Waiting for Swipe",
+          "WAITING_FOR_BUTTON": "Waiting for Button",
+          "NOT_CONNECTED": "Not Connected",
+          "READY_TO_CHARGE": "Ready to Charge",
+          "CHARGING": "Charging",
+          "COMPLETED": "Completed",
+          "COMPLETED_FULL_CHARGE": "Completed Full Charge",
+          "CHARGING_RESERVATION": "Charging Reservation"
+        }
       },
       "current_power": {
         "name": "Current Power"
       },
       "plug_state": {
-        "name": "Plug State"
+        "name": "Plug State",
+        "state": {
+          "DISCONNECTED": "Disconnected",
+          "CONNECTED_UNLOCKED": "Connected (Unlocked)",
+          "CONNECTED_LOCKED": "Connected (Locked)"
+        }
       },
       "inner_temperature": {
         "name": "Inner Temperature"
@@ -54,6 +70,16 @@
       },
       "stop_charging": {
         "name": "Stop Charging"
+      }
+    },
+    "text": {
+      "nickname": {
+        "name": "Nickname"
+      }
+    },
+    "number": {
+      "max_amps": {
+        "name": "Max Amps"
       }
     }
   }

@@ -17,6 +17,8 @@ PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.BUTTON,
     Platform.BINARY_SENSOR,
+    Platform.TEXT,
+    Platform.NUMBER,
 ]
 
 
@@ -44,5 +46,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok:
         coordinator = entry.runtime_data
         await coordinator.async_shutdown()
+
 
     return unload_ok

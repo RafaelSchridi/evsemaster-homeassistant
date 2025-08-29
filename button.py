@@ -3,15 +3,21 @@
 from __future__ import annotations
 
 import logging
+import voluptuous as vol
 
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .coordinator import EVSEMasterDataUpdateCoordinator, DataSchema
-from evsemaster.data_types import EvseStatus, CurrentStateEnum
+from .evse_loader import data_types
+
+# Import specific classes from the modules
+EvseStatus = data_types.EvseStatus
+CurrentStateEnum = data_types.CurrentStateEnum
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -59,11 +65,18 @@ class EVSEStartChargingButton(_BaseButton, ButtonEntity):
             return status.current_state != CurrentStateEnum.CHARGING
         return False
 
-    async def async_press(self) -> None:
-        try:
-            await self.coordinator.async_start_charging(self.entry.device.serial_number)
-        except Exception as err:  # noqa: BLE001
-            _LOGGER.error("Error starting charging on %s: %s", self.entry.device.serial_number, err)
+    async def async_press(
+        self,
+        max_amps: int | None = None,
+        duration_hours: float | None = None,
+        start_datetime: str | None = None,
+    ) -> None:
+        await self.coordinator.async_start_charging(
+            self.entry.device.serial_number,
+            max_amps,
+            start_datetime,
+            duration_hours,
+        )
 
 
 class EVSEStopChargingButton(_BaseButton, ButtonEntity):
@@ -83,7 +96,4 @@ class EVSEStopChargingButton(_BaseButton, ButtonEntity):
         return False
 
     async def async_press(self) -> None:
-        try:
-            await self.coordinator.async_stop_charging(self.entry.device.serial_number)
-        except Exception as err:  # noqa: BLE001
-            _LOGGER.error("Error stopping charging on %s: %s", self.entry.device.serial_number, err)
+        await self.coordinator.async_stop_charging()
