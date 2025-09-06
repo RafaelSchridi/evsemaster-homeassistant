@@ -69,7 +69,7 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
     def _ensure_serial(self) -> tuple[str, DataSchema]:
         """Ensure the serial number is set in the data schema."""
         proto_device = self.proto.get_latest_device_info()
-        if  self.data.device != proto_device and proto_device is not None:
+        if proto_device and proto_device.serial_number != self.data.device.serial_number:
             self.data.device = DeviceSchema.model_validate(proto_device.model_dump())
 
     def _on_protocol_event(self, event_type: str, payload: Any) -> None:
@@ -127,24 +127,26 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
         self._connected = False
         _LOGGER.info("EVSE client disconnected")
 
+
     async def async_start_charging(
         self, 
         max_amps: int | None = None,
-        start_datetime: datetime | None = None,
+        start_datetime: datetime| str | None = None,
         duration_hours: float | None = None,
     ) -> bool:
         """Start charging with advanced parameters."""
         try:
-            _LOGGER.info(
-                "Starting charging on %s: max_amps=%d, duration_hours=%s, start_datetime=%s",
-                self.data.device.serial_number, max_amps, duration_hours, start_datetime
-            )
             minutes = None
             if duration_hours is not None:
                 minutes = int(duration_hours * 60)
+            if isinstance(start_datetime, str):
+                start_datetime = datetime.fromisoformat(start_datetime)
+            _LOGGER.info(
+                f"Starting charging on {self.data.device.serial_number}: amps={max_amps}, duration={minutes}m, start={start_datetime}"
+            )
             return await self.proto.start_charging(max_amps,start_datetime,minutes)
         except Exception as err:
-            _LOGGER.error("Error starting advanced charging on %s: %s", self.data.device.serial_number, err)
+            _LOGGER.error("Error starting charging on %s: %s", self.data.device.serial_number, err)
             return False
         
     async def async_stop_charging(self) -> bool:

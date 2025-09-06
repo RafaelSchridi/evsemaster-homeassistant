@@ -1,1 +1,5 @@
 DOMAIN = "evsemaster"
+SERVICE_ACTION_START_CHARGING = "start_charging"
+SERVICE_DATA_DURATION_HOURS = "duration_hours"
+SERVICE_DATA_MAX_AMPS = "max_amps"
+SERVICE_DATA_START_DATETIME = "start_datetime"

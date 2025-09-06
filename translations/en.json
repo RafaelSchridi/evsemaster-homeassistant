@@ -54,6 +54,12 @@
       },
       "total_kwh": {
         "name": "Total kWh"
+      },
+      "reservation_datetime": {
+        "name": "Reservation Start Time"
+      },
+      "reservation_max_duration": {
+        "name": "Reservation Max Duration"
       }
     },
     "binary_sensor": {

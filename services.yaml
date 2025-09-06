@@ -1,0 +1,33 @@
+start_charging:
+  name: Start Charging
+  description: Start charging with advanced parameters
+  target:
+    device:
+      integration: evsemaster
+  fields:
+    max_amps:
+      name: Maximum Amperage
+      description: Maximum charging amperage, Depends on device capabilities.
+      required: false
+      selector:
+        number:
+          min: 6
+          max: 32
+          step: 1
+          unit_of_measurement: "A"
+    start_datetime:
+      name: Start Date/Time
+      description: When to start charging (leave empty for immediate)
+      required: false
+      selector:
+        datetime:
+    duration_hours:
+      name: Duration (Hours)
+      description: Maximum charging duration in hours (leave empty for unlimited)
+      required: false
+      selector:
+        number:
+          min: 0.5
+          max: 24
+          step: 0.5
+          unit_of_measurement: "h"

@@ -1,6 +1,7 @@
 """Basic sensors for EVSEMaster integration (minimal)."""
 
 from __future__ import annotations
+from datetime import datetime
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -8,7 +9,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfPower,UnitOfEnergy,UnitOfTemperature
+from homeassistant.const import UnitOfPower,UnitOfEnergy,UnitOfTemperature, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -19,6 +20,7 @@ from .evse_loader import data_types
 
 # Import specific classes from the modules
 EvseStatus = data_types.EvseStatus
+ChargingStatus = data_types.ChargingStatus
 PlugStateEnum = data_types.PlugStateEnum
 
 
@@ -36,6 +38,8 @@ async def async_setup_entry(
     entities.append(EVSEInnerTemperatureSensor(coordinator))
     entities.append(EVSEOuterTemperatureSensor(coordinator))
     entities.append(EVSETotalKwhSensor(coordinator))
+    entities.append(EVSEReservationDatetimeSensor(coordinator))
+    entities.append(EVSEReservationDurationSensor(coordinator))
 
     async_add_entities(entities)
 
@@ -146,3 +150,34 @@ class EVSETotalKwhSensor(_Base, SensorEntity):
         status: EvseStatus = self.entry.status
         if status:
             return status.total_kwh
+        
+class EVSEReservationDatetimeSensor(_Base, SensorEntity):
+    _attr_translation_key = "reservation_datetime"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{self.entry.device.serial_number}_reservation_datetime"
+
+    @property
+    def native_value(self) -> float | None:
+        cstatus = self.entry.charging_status
+        if cstatus and isinstance(cstatus.reservation_datetime, datetime):
+            return cstatus.reservation_datetime
+        return None
+    
+class EVSEReservationDurationSensor(_Base, SensorEntity):
+    _attr_translation_key = "reservation_max_duration"
+    _attr_device_class = SensorDeviceClass.DURATION
+    _attr_native_unit_of_measurement = UnitOfTime.MINUTES
+
+    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{self.entry.device.serial_number}_reservation_max_duration"
+
+    @property
+    def native_value(self) -> float | None:
+        cstatus = self.entry.charging_status
+        if cstatus and cstatus.max_duration_minutes is not None:          
+            return cstatus.max_duration_minutes
+        return None
