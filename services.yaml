@@ -27,7 +27,7 @@ start_charging:
       required: false
       selector:
         number:
-          min: 0.5
+          min: 1
           max: 24
-          step: 0.5
+          step: 1
           unit_of_measurement: "h"
