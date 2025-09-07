@@ -34,6 +34,7 @@ class DeviceSchema(EvseDeviceInfo):
             "model": self.model,
             "serial_number": self.serial_number,
             "hw_version": self.hardware_version,
+            "name_by_user": self.nickname if self.nickname else None,
             }
 
 class DataSchema(BaseSchema):

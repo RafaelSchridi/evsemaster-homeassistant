@@ -40,7 +40,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # init start/stop service actions
     async def start_charge_service_call(service: ServiceCall) -> bool:
         device_id = service.data.get("device_id")
-        #TODO: figure out how to get current device_id validate againt incomidng device_id
+        #TODO: figure out how to get current device_id to validate againt incoming device_id
         max_amps = service.data.get(SERVICE_DATA_MAX_AMPS)
         duration_hours = service.data.get(SERVICE_DATA_DURATION_HOURS)
         start_datetime = service.data.get(SERVICE_DATA_START_DATETIME)

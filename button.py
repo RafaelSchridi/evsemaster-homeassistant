@@ -72,7 +72,6 @@ class EVSEStartChargingButton(_BaseButton, ButtonEntity):
         start_datetime: str | None = None,
     ) -> None:
         await self.coordinator.async_start_charging(
-            self.entry.device.serial_number,
             max_amps,
             start_datetime,
             duration_hours,
