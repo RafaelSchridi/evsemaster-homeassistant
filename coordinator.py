@@ -29,12 +29,11 @@ class DeviceSchema(EvseDeviceInfo):
         """Return device info for Home Assistant."""
         return {
             "identifiers": {(DOMAIN, self.serial_number)},
-            "name": f"{self.model}", # manufacturer + model or just model?
+            "name": self.nickname if self.nickname else self.model,
             "manufacturer": self.brand,
             "model": self.model,
             "serial_number": self.serial_number,
             "hw_version": self.hardware_version,
-            "name_by_user": self.nickname if self.nickname else None,
             }
 
 class DataSchema(BaseSchema):
