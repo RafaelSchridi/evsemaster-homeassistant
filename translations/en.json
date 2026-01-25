@@ -56,13 +56,13 @@
         "name": "Total kWh"
       },
       "charge_kwh": {
-        "name": "Charge kWh"
+        "name": "Session kWh"
       },
       "charge_duration": {
-        "name": "Charge Duration"
+        "name": "Session Duration"
       },
-      "start_datetime": {
-        "name": "Start Time"
+      "session_start_datetime": {
+        "name": "Session Start"
       },
       "reservation_datetime": {
         "name": "Reservation Start Time"

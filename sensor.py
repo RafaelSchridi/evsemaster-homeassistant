@@ -191,12 +191,12 @@ class EVSEChargeDurationSensor(_Base, SensorEntity):
 
 
 class EVSEStartDatetimeSensor(_Base, SensorEntity):
-    _attr_translation_key = "start_datetime"
+    _attr_translation_key = "session_start_datetime"
     _attr_device_class = SensorDeviceClass.TIMESTAMP
 
     def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
         super().__init__(coordinator)
-        self._attr_unique_id = f"{self.entry.device.serial_number}_start_datetime"
+        self._attr_unique_id = f"{self.entry.device.serial_number}_session_start_datetime"
 
     @property
     def native_value(self) -> datetime | None:

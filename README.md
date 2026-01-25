@@ -74,13 +74,13 @@ Ambient/external temperature reading in Celsius (°C).
 #### **Total kWh** (`sensor.*_total_kwh`)
 Total cumulative energy delivered by the charger since it was first installed. This is a persistent counter that only increases.
 
-#### **Charge kWh** (`sensor.*_charge_kwh`)
-Total cumulative energy delivered by the charger in the current charging sensor. This counter resets back to `0` when the next charging session starts.
+#### **Session kWh** (`sensor.*_charge_kwh`)
+Total cumulative energy delivered by the charger in the current charging session. This counter resets back to `0` when the next charging session starts.
 
-#### **Charge Duration** (`sensor.*_charge_duration`)
+#### **Session Duration** (`sensor.*_charge_duration`)
 Duration of the current charging session in seconds. This counter resets back to `0` when the next charging session starts.
 
-#### **Start Time** (`sensor.*_start_datetime`)
+#### **Session Time** (`sensor.*_session_start_datetime`)
 Date/time when the current or last charging session started.
 
 #### **Reservation Start Time** (`sensor.*_reservation_datetime`)
