@@ -133,7 +133,7 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
     async def async_start_charging(
         self, 
         max_amps: int | None = None,
-        start_datetime: datetime| str | None = None,
+        start_datetime: datetime | str | None = None,
         duration_hours: float | None = None,
     ) -> bool:
         """Start charging with advanced parameters."""
