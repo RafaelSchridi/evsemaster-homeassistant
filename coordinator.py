@@ -52,6 +52,8 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
             name=DOMAIN,
             config_entry=entry,
             update_interval=timedelta(seconds=60),
+            update_method=self._async_update_data,
+            always_update=True,
         )
         self.entry = entry
         self.host = entry.data[CONF_HOST]
