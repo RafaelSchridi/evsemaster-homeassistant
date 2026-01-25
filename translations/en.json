@@ -53,16 +53,19 @@
         "name": "Outer Temperature"
       },
       "total_kwh": {
-        "name": "Total kWh"
+        "name": "Total Energy"
       },
       "charge_kwh": {
-        "name": "Session kWh"
+        "name": "Session Energy"
       },
       "charge_duration": {
         "name": "Session Duration"
       },
       "session_start_datetime": {
         "name": "Session Start"
+      },
+      "session_max_current": {
+        "name": "Session Max Current"
       },
       "reservation_datetime": {
         "name": "Reservation Start Time"
