@@ -143,6 +143,8 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
                 minutes = int(duration_hours * 60)
             if isinstance(start_datetime, str):
                 start_datetime = datetime.fromisoformat(start_datetime)
+                if start_datetime.tzinfo is None:
+                    start_datetime = start_datetime.replace(tzinfo=datetime.now().astimezone().tzinfo)
             _LOGGER.info(
                 f"Starting charging on {self.data.device.serial_number}: amps={max_amps}, duration={minutes}m, start={start_datetime}"
             )

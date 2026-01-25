@@ -31,7 +31,7 @@ Start a charging session with optional parameters for delayed start and maximum 
 
 **Parameters:**
 - **`max_amps`** (optional): Maximum charging amperage in Amperes (A). Range: 6-32 A. If not specified, the charger's current configured max amps will be used.
-- **`start_datetime`** (optional): When to start charging. Format: ISO 8601 datetime string. If not specified, charging starts immediately.
+- **`start_datetime`** (optional): When to start charging. Format: ISO 8601 datetime string. If not specified, charging starts immediately. Needs to be within **24 hours** from now. If timezone is not specified, the local timezone will be assumed.
 - **`duration_hours`** (optional): Maximum charging duration in hours. Range: 1-24 hours. If not specified, charging will continue until manually stopped or the vehicle is fully charged.
 - **`target.device_id`**: The device ID of the charger to control. Currently, only a single charger is supported per Home Assistant instance. so nothing is done with this **yet**.
 
@@ -42,7 +42,7 @@ target:
   device_id: YOUR_DEVICE_ID
 data:
   max_amps: 16
-  start_datetime: "2024-01-25T14:30:00"
+  start_datetime: "2024-01-25T14:30:00+01:00"
   duration_hours: 2
 ```
 
