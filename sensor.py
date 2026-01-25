@@ -38,6 +38,9 @@ async def async_setup_entry(
     entities.append(EVSEInnerTemperatureSensor(coordinator))
     entities.append(EVSEOuterTemperatureSensor(coordinator))
     entities.append(EVSETotalKwhSensor(coordinator))
+    entities.append(EVSEChargeKwhSensor(coordinator))
+    entities.append(EVSEChargeDurationSensor(coordinator))
+    entities.append(EVSEStartDatetimeSensor(coordinator))
     entities.append(EVSEReservationDatetimeSensor(coordinator))
     entities.append(EVSEReservationDurationSensor(coordinator))
 
@@ -54,7 +57,6 @@ class _Base(CoordinatorEntity[EVSEMasterDataUpdateCoordinator]):
     @property
     def entry(self) -> DataSchema:
         return self.coordinator.data
-    
 
 
 class EVSEStateSensor(_Base, SensorEntity):
@@ -82,10 +84,11 @@ class EVSECurrentPowerSensor(_Base, SensorEntity):
         self._attr_unique_id = f"{self.entry.device.serial_number}_current_power"
 
     @property
-    def native_value(self) -> float | None:
+    def native_value(self) -> int | None:
         status: EvseStatus = self.entry.status
         if status:
             return status.current_power
+
 
 class EVSEPlugStateSensor(_Base, SensorEntity):
     _attr_translation_key = "plug_state"
@@ -100,7 +103,8 @@ class EVSEPlugStateSensor(_Base, SensorEntity):
         if status and status.plug_state is not None:
             return PlugStateEnum(status.plug_state).name
         return None
-    
+
+
 class EVSEInnerTemperatureSensor(_Base, SensorEntity):
     _attr_translation_key = "inner_temperature"
     _attr_device_class = SensorDeviceClass.TEMPERATURE
@@ -116,13 +120,13 @@ class EVSEInnerTemperatureSensor(_Base, SensorEntity):
         status: EvseStatus = self.entry.status
         if status:
             return status.inner_temperature
-        
+
+
 class EVSEOuterTemperatureSensor(_Base, SensorEntity):
     _attr_translation_key = "outer_temperature"
     _attr_device_class = SensorDeviceClass.TEMPERATURE
     # FIXME: you can change the unit on the EVSE
     _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
-
 
     def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
         super().__init__(coordinator)
@@ -133,13 +137,13 @@ class EVSEOuterTemperatureSensor(_Base, SensorEntity):
         status: EvseStatus = self.entry.status
         if status:
             return status.outer_temperature
-        
+
 
 class EVSETotalKwhSensor(_Base, SensorEntity):
     _attr_translation_key = "total_kwh"
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
     _attr_device_class = SensorDeviceClass.ENERGY
-    _attr_state_class = SensorStateClass.TOTAL
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
 
     def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
         super().__init__(coordinator)
@@ -150,7 +154,58 @@ class EVSETotalKwhSensor(_Base, SensorEntity):
         status: EvseStatus = self.entry.status
         if status:
             return status.total_kwh
-        
+
+
+class EVSEChargeKwhSensor(_Base, SensorEntity):
+    _attr_translation_key = "charge_kwh"
+    _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
+    _attr_device_class = SensorDeviceClass.ENERGY
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+
+    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{self.entry.device.serial_number}_charge_kwh"
+
+    @property
+    def native_value(self) -> float | None:
+        cstatus = self.entry.charging_status
+        if cstatus:
+            return cstatus.charge_kwh
+
+
+class EVSEChargeDurationSensor(_Base, SensorEntity):
+    _attr_translation_key = "charge_duration"
+    _attr_device_class = SensorDeviceClass.DURATION
+    _attr_native_unit_of_measurement = UnitOfTime.SECONDS
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+
+    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{self.entry.device.serial_number}_charge_duration"
+
+    @property
+    def native_value(self) -> int | None:
+        cstatus = self.entry.charging_status
+        if cstatus:
+            return cstatus.duration_seconds
+
+
+class EVSEStartDatetimeSensor(_Base, SensorEntity):
+    _attr_translation_key = "start_datetime"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{self.entry.device.serial_number}_start_datetime"
+
+    @property
+    def native_value(self) -> datetime | None:
+        cstatus = self.entry.charging_status
+        if cstatus and isinstance(cstatus.set_datetime, datetime):
+            return cstatus.set_datetime
+        return None
+
+
 class EVSEReservationDatetimeSensor(_Base, SensorEntity):
     _attr_translation_key = "reservation_datetime"
     _attr_device_class = SensorDeviceClass.TIMESTAMP
@@ -160,12 +215,13 @@ class EVSEReservationDatetimeSensor(_Base, SensorEntity):
         self._attr_unique_id = f"{self.entry.device.serial_number}_reservation_datetime"
 
     @property
-    def native_value(self) -> float | None:
+    def native_value(self) -> datetime | None:
         cstatus = self.entry.charging_status
         if cstatus and isinstance(cstatus.reservation_datetime, datetime):
             return cstatus.reservation_datetime
         return None
-    
+
+
 class EVSEReservationDurationSensor(_Base, SensorEntity):
     _attr_translation_key = "reservation_max_duration"
     _attr_device_class = SensorDeviceClass.DURATION
@@ -176,8 +232,8 @@ class EVSEReservationDurationSensor(_Base, SensorEntity):
         self._attr_unique_id = f"{self.entry.device.serial_number}_reservation_max_duration"
 
     @property
-    def native_value(self) -> float | None:
+    def native_value(self) -> int | None:
         cstatus = self.entry.charging_status
-        if cstatus and cstatus.max_duration_minutes is not None:          
+        if cstatus and cstatus.max_duration_minutes is not None:
             return cstatus.max_duration_minutes
         return None

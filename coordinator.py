@@ -34,7 +34,7 @@ class DeviceSchema(EvseDeviceInfo):
             "model": self.model,
             "serial_number": self.serial_number,
             "hw_version": self.hardware_version,
-            }
+        }
 
 class DataSchema(BaseSchema):
     """Schema for EVSE data."""
@@ -131,7 +131,7 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
 
 
     async def async_start_charging(
-        self, 
+        self,
         max_amps: int | None = None,
         start_datetime: datetime| str | None = None,
         duration_hours: float | None = None,
@@ -150,7 +150,7 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
         except Exception as err:
             _LOGGER.error("Error starting charging on %s: %s", self.data.device.serial_number, err)
             return False
-        
+
     async def async_stop_charging(self) -> bool:
         try:
             return await self.proto.stop_charging()

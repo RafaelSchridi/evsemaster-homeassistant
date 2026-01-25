@@ -2,6 +2,8 @@
 
 This Home Assistant integration provides comprehensive control and monitoring of EVSE chargers that are compatible with the EVSEMaster app. While all testing was done on Telestar device, it should work with all devices that use the app like the one from Besen, Telestar, evseODM, Morec, Deltacom, etc.
 
+The underlying implementation is factored out to a separate Python package: https://github.com/RafaelSchridi/evsemaster
+
 ## Verified Compatible Devices
 - Telestar EC311S6
 - [Besen B20](https://github.com/RafaelSchridi/evsemaster-homeassistant/issues/1)
@@ -67,10 +69,19 @@ Internal charger temperature in Celsius (°C).
 
 #### **Outer Temperature** (`sensor.*_outer_temperature`)
 Ambient/external temperature reading in Celsius (°C).
-- **Note:** On some devices like the Telestar this sensor is just the inner temperature again.
+- **Note:** On some devices like the Telestar and Besen this sensor is just the inner temperature again.
 
-#### **Total Energy** (`sensor.*_total_kwh`)
+#### **Total kWh** (`sensor.*_total_kwh`)
 Total cumulative energy delivered by the charger since it was first installed. This is a persistent counter that only increases.
+
+#### **Charge kWh** (`sensor.*_charge_kwh`)
+Total cumulative energy delivered by the charger in the current charging sensor. This counter resets back to `0` when the next charging session starts.
+
+#### **Charge Duration** (`sensor.*_charge_duration`)
+Duration of the current charging session in seconds. This counter resets back to `0` when the next charging session starts.
+
+#### **Start Time** (`sensor.*_start_datetime`)
+Date/time when the current or last charging session started.
 
 #### **Reservation Start Time** (`sensor.*_reservation_datetime`)
 The scheduled start time for a charging session if one is set via the `start_charging` service.
