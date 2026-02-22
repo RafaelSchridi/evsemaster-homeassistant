@@ -7,6 +7,7 @@ import logging
 from homeassistant.components.number import NumberEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.const import UnitOfElectricCurrent
@@ -16,6 +17,7 @@ from .evse_loader import data_types
 
 # Import specific classes from the modules
 EvseStatus = data_types.EvseStatus
+CurrentStateEnum = data_types.CurrentStateEnum
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -52,6 +54,7 @@ class EVSEMaxAmpsNumber(_BaseNumber, NumberEntity):
     _attr_native_min_value = 6
     _attr_native_step = 1
     _attr_native_unit_of_measurement = UnitOfElectricCurrent.AMPERE
+    _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
         super().__init__(coordinator)
@@ -70,9 +73,9 @@ class EVSEMaxAmpsNumber(_BaseNumber, NumberEntity):
     def available(self) -> bool:
         """Check if entity is available."""
         status: EvseStatus | None = self.entry.status
-        if status and self.entry.device and self.entry.device.configured_max_amps is not None:
-            return True
-        return False
+        if not (status and self.entry.device and self.entry.device.configured_max_amps is not None):
+            return False
+        return status.current_state != CurrentStateEnum.CHARGING
 
     async def async_set_native_value(self, value: float) -> None:
         """Set the max amps."""

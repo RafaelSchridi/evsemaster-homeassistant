@@ -30,7 +30,7 @@ This Home Assistant integration is based on the excellent work by **[@johnwoo-nl
 Start a charging session with optional parameters for delayed start and maximum duration.
 
 **Parameters:**
-- **`max_amps`** (optional): Maximum charging amperage in Amperes (A). Range: 6-32 A. If not specified, the charger's current configured max amps will be used.
+- **`max_amps`** (optional): Maximum charging amperage in Amperes (A). If not specified, the charger's configured max amps will be used. Values above the **configured** max are clamped to it; values above the device **hardware** limit raise an error.
 - **`start_datetime`** (optional): When to start charging. Format: ISO 8601 datetime string. If not specified, charging starts immediately. Needs to be within **24 hours** from now. If timezone is not specified, the local timezone will be assumed.
 - **`duration_hours`** (optional): Maximum charging duration in hours. Range: 1-24 hours. If not specified, charging will continue until manually stopped or the vehicle is fully charged.
 - **`target.device_id`**: The device ID of the charger to control. Currently, only a single charger is supported per Home Assistant instance. so nothing is done with this **yet**.
@@ -83,13 +83,12 @@ Duration of the current charging session in seconds. This counter resets back to
 #### **Session Time** (`sensor.*_session_start_datetime`)
 Date/time when the current or last charging session started.
 
-#### **Reservation Start Time** (`sensor.*_reservation_datetime`)
+#### **Reservation Start** (`sensor.*_reservation_datetime`)
 The scheduled start time for a charging session if one is set via the `start_charging` service.
 
-#### **Reservation Max Duration** (`sensor.*_reservation_max_duration`)
-The maximum duration for a reserved charging session in minutes. set via the `start_charging` service.
+#### **Reservation Duration** (`sensor.*_reservation_max_duration`)
+The duration for a reserved charging session in minutes. set via the `start_charging` service.
 
----
 
 ### Binary Sensors
 
@@ -111,21 +110,28 @@ Triggers a charging session immediately or with optional start delay and duratio
 Stops the current charging session.
 - **Availability:** Only available when a vehicle is connected
 
-### Number Inputs
+
+## Configuration Entities
+These appear in the **Configuration** section of the device page.
 
 #### **Max Amps** (`number.*_max_amps`)
-Sets the maximum charging current allowed for the charger.
-- **Range:** 6-32 A (based on device capability)
-- **Effect:** Changes the charging current limit on the charger. This affects all future charging sessions until changed again.
-- **Note:** Can't be adjusted during an active charging session.
-
----
-
-### Text Inputs
+Sets the maximum charging current for the charger. Range: 6 A to the device hardware limit.
+- Unavailable during an active charging session.
 
 #### **Nickname** (`text.*_nickname`)
 Custom name for the charger device for easy identification. Also changes the name displayed on the charger itself.
 - **Max Length:** Device-dependent (typically 28-32 characters)
 
----
 
+## Diagnostic Entities
+
+These entities are disabled by default and appear in the **Diagnostic** section of the device page.
+
+##### **Device Clock Offset** (`sensor.*_time_delta`)
+Clock skew between the charger's internal clock and local time in seconds. Some firmware versions have a bug where the device clock drifts by weeks; when a discrepancy of more than 24 hours is detected, this integration automatically compensates when scheduling sessions. `0` means no workaround is active.
+
+##### **L1/L2/L3 Voltage** (`sensor.*_l1_voltage`, `l2_voltage`, `l3_voltage`)
+Per-phase voltage in Volts (V).
+
+##### **L1/L2/L3 Current** (`sensor.*_l1_current`, `l2_current`, `l3_current`)
+Per-phase current in Amperes (A).

@@ -7,6 +7,7 @@ import logging
 from homeassistant.components.text import TextEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -49,6 +50,7 @@ class EVSENicknameText(_BaseText, TextEntity):
     _attr_translation_key = "nickname"
     _attr_icon = "mdi:tag-text"
     _attr_mode = "text"
+    _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
         super().__init__(coordinator)

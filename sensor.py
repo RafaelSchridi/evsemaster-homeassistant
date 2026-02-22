@@ -9,7 +9,8 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfPower,UnitOfEnergy,UnitOfTemperature, UnitOfTime, UnitOfElectricCurrent
+from homeassistant.const import UnitOfPower,UnitOfEnergy,UnitOfTemperature, UnitOfTime, UnitOfElectricCurrent, UnitOfElectricPotential
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -44,6 +45,13 @@ async def async_setup_entry(
     entities.append(EVSESessionMaxCurrentSensor(coordinator))
     entities.append(EVSEReservationDatetimeSensor(coordinator))
     entities.append(EVSEReservationDurationSensor(coordinator))
+    entities.append(EVSETimeDeltaSensor(coordinator))
+    entities.append(EVSEL1VoltageSensor(coordinator))
+    entities.append(EVSEL2VoltageSensor(coordinator))
+    entities.append(EVSEL3VoltageSensor(coordinator))
+    entities.append(EVSEL1CurrentSensor(coordinator))
+    entities.append(EVSEL2CurrentSensor(coordinator))
+    entities.append(EVSEL3CurrentSensor(coordinator))
 
     async_add_entities(entities)
 
@@ -241,7 +249,7 @@ class EVSEReservationDatetimeSensor(_Base, SensorEntity):
 
 
 class EVSEReservationDurationSensor(_Base, SensorEntity):
-    _attr_translation_key = "reservation_max_duration"
+    _attr_translation_key = "reservation_duration"
     _attr_device_class = SensorDeviceClass.DURATION
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
 
@@ -255,3 +263,119 @@ class EVSEReservationDurationSensor(_Base, SensorEntity):
         if cstatus and cstatus.max_duration_minutes is not None:
             return cstatus.max_duration_minutes
         return None
+
+
+class EVSETimeDeltaSensor(_Base, SensorEntity):
+    _attr_translation_key = "time_delta"
+    _attr_device_class = SensorDeviceClass.DURATION
+    _attr_native_unit_of_measurement = UnitOfTime.SECONDS
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
+
+    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{self.entry.device.serial_number}_time_delta"
+
+    @property
+    def native_value(self) -> int:
+        return self.coordinator.proto._time_delta
+
+
+class _BasePhase(_Base, SensorEntity):
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    @property
+    def available(self) -> bool:
+        return self.entry.status is not None
+
+
+class EVSEL1VoltageSensor(_BasePhase):
+    _attr_translation_key = "l1_voltage"
+    _attr_device_class = SensorDeviceClass.VOLTAGE
+    _attr_native_unit_of_measurement = UnitOfElectricPotential.VOLT
+
+    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{self.entry.device.serial_number}_l1_voltage"
+
+    @property
+    def native_value(self) -> float | None:
+        status = self.entry.status
+        return status.l1_voltage if status else None
+
+
+class EVSEL2VoltageSensor(_BasePhase):
+    _attr_translation_key = "l2_voltage"
+    _attr_device_class = SensorDeviceClass.VOLTAGE
+    _attr_native_unit_of_measurement = UnitOfElectricPotential.VOLT
+
+    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{self.entry.device.serial_number}_l2_voltage"
+
+    @property
+    def native_value(self) -> float | None:
+        status = self.entry.status
+        return status.l2_voltage if status else None
+
+
+class EVSEL3VoltageSensor(_BasePhase):
+    _attr_translation_key = "l3_voltage"
+    _attr_device_class = SensorDeviceClass.VOLTAGE
+    _attr_native_unit_of_measurement = UnitOfElectricPotential.VOLT
+
+    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{self.entry.device.serial_number}_l3_voltage"
+
+    @property
+    def native_value(self) -> float | None:
+        status = self.entry.status
+        return status.l3_voltage if status else None
+
+
+class EVSEL1CurrentSensor(_BasePhase):
+    _attr_translation_key = "l1_current"
+    _attr_device_class = SensorDeviceClass.CURRENT
+    _attr_native_unit_of_measurement = UnitOfElectricCurrent.AMPERE
+
+    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{self.entry.device.serial_number}_l1_current"
+
+    @property
+    def native_value(self) -> float | None:
+        status = self.entry.status
+        return status.l1_amps if status else None
+
+
+class EVSEL2CurrentSensor(_BasePhase):
+    _attr_translation_key = "l2_current"
+    _attr_device_class = SensorDeviceClass.CURRENT
+    _attr_native_unit_of_measurement = UnitOfElectricCurrent.AMPERE
+
+    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{self.entry.device.serial_number}_l2_current"
+
+    @property
+    def native_value(self) -> float | None:
+        status = self.entry.status
+        return status.l2_amps if status else None
+
+
+class EVSEL3CurrentSensor(_BasePhase):
+    _attr_translation_key = "l3_current"
+    _attr_device_class = SensorDeviceClass.CURRENT
+    _attr_native_unit_of_measurement = UnitOfElectricCurrent.AMPERE
+
+    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{self.entry.device.serial_number}_l3_current"
+
+    @property
+    def native_value(self) -> float | None:
+        status = self.entry.status
+        return status.l3_amps if status else None

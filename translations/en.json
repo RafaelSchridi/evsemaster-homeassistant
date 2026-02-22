@@ -68,10 +68,31 @@
         "name": "Session Max Current"
       },
       "reservation_datetime": {
-        "name": "Reservation Start Time"
+        "name": "Reservation Start"
       },
-      "reservation_max_duration": {
-        "name": "Reservation Max Duration"
+      "reservation_duration": {
+        "name": "Reservation Duration"
+      },
+      "time_delta": {
+        "name": "Device Clock Offset"
+      },
+      "l1_voltage": {
+        "name": "L1 Voltage"
+      },
+      "l2_voltage": {
+        "name": "L2 Voltage"
+      },
+      "l3_voltage": {
+        "name": "L3 Voltage"
+      },
+      "l1_current": {
+        "name": "L1 Current"
+      },
+      "l2_current": {
+        "name": "L2 Current"
+      },
+      "l3_current": {
+        "name": "L3 Current"
       }
     },
     "binary_sensor": {

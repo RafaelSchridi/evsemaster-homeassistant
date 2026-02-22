@@ -61,9 +61,7 @@ class EVSEStartChargingButton(_BaseButton, ButtonEntity):
     @property
     def available(self) -> bool:
         status: EvseStatus | None = self.entry.status
-        if status and status.current_state is not None:
-            return status.current_state != CurrentStateEnum.NOT_CONNECTED
-        return False
+        return True if status and status.current_state is not None else False
 
     async def async_press(
         self,

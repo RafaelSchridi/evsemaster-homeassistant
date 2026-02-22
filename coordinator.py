@@ -10,6 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.exceptions import HomeAssistantError
 
 from .const import DOMAIN
 from .evse_loader import evse_protocol, data_types
@@ -20,6 +21,7 @@ EvseStatus = data_types.EvseStatus
 ChargingStatus = data_types.ChargingStatus
 BaseSchema = data_types.BaseSchema
 EvseDeviceInfo = data_types.EvseDeviceInfo
+now_aware = data_types.now_aware
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -145,13 +147,26 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
                 start_datetime = datetime.fromisoformat(start_datetime)
                 if start_datetime.tzinfo is None:
                     start_datetime = start_datetime.replace(tzinfo=datetime.now().astimezone().tzinfo)
+            if start_datetime and start_datetime > now_aware() + timedelta(hours=24):
+                raise ValueError("Reservation cannot be scheduled more than 24 hours in the future")
+            if max_amps is not None:
+                if max_amps > self.data.device.max_amps:
+                    raise ValueError(
+                        f"Requested max_amps {max_amps} exceeds device hardware limit of {self.data.device.max_amps} A"
+                    )
+                if max_amps > self.data.device.configured_max_amps:
+                    _LOGGER.warning(
+                        "Requested max_amps %d exceeds configured max %d, clamping",
+                        max_amps, self.data.device.configured_max_amps,
+                    )
+                    max_amps = self.data.device.configured_max_amps
             _LOGGER.info(
                 f"Starting charging on {self.data.device.serial_number}: amps={max_amps}, duration={minutes}m, start={start_datetime}"
             )
-            return await self.proto.start_charging(max_amps,start_datetime,minutes)
+            return await self.proto.start_charging(max_amps, start_datetime, minutes)
         except Exception as err:
             _LOGGER.error("Error starting charging on %s: %s", self.data.device.serial_number, err)
-            return False
+            raise HomeAssistantError(str(err))
 
     async def async_stop_charging(self) -> bool:
         try:

@@ -38,16 +38,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     # init start/stop service actions
-    async def start_charge_service_call(service: ServiceCall) -> bool:
+    async def start_charge_service_call(service: ServiceCall) -> None:
         device_id = service.data.get("device_id")
         #TODO: figure out how to get current device_id to validate againt incoming device_id
         max_amps = service.data.get(SERVICE_DATA_MAX_AMPS)
         duration_hours = service.data.get(SERVICE_DATA_DURATION_HOURS)
         start_datetime = service.data.get(SERVICE_DATA_START_DATETIME)
-        success = await coordinator.async_start_charging(max_amps, start_datetime, duration_hours)
-        if not success:
-            raise Exception("Failed to start charging")
-        return success
+        await coordinator.async_start_charging(max_amps, start_datetime, duration_hours)
 
     hass.services.async_register(DOMAIN, SERVICE_ACTION_START_CHARGING, start_charge_service_call)
 
