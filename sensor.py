@@ -9,7 +9,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfPower,UnitOfEnergy,UnitOfTemperature, UnitOfTime
+from homeassistant.const import UnitOfPower,UnitOfEnergy,UnitOfTemperature, UnitOfTime, UnitOfElectricCurrent
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -40,7 +40,8 @@ async def async_setup_entry(
     entities.append(EVSETotalKwhSensor(coordinator))
     entities.append(EVSEChargeKwhSensor(coordinator))
     entities.append(EVSEChargeDurationSensor(coordinator))
-    entities.append(EVSEStartDatetimeSensor(coordinator))
+    entities.append(EVSESessionStartDatetimeSensor(coordinator))
+    entities.append(EVSESessionMaxCurrentSensor(coordinator))
     entities.append(EVSEReservationDatetimeSensor(coordinator))
     entities.append(EVSEReservationDurationSensor(coordinator))
 
@@ -190,7 +191,7 @@ class EVSEChargeDurationSensor(_Base, SensorEntity):
             return cstatus.duration_seconds
 
 
-class EVSEStartDatetimeSensor(_Base, SensorEntity):
+class EVSESessionStartDatetimeSensor(_Base, SensorEntity):
     _attr_translation_key = "session_start_datetime"
     _attr_device_class = SensorDeviceClass.TIMESTAMP
 
@@ -203,6 +204,23 @@ class EVSEStartDatetimeSensor(_Base, SensorEntity):
         cstatus = self.entry.charging_status
         if cstatus and isinstance(cstatus.set_datetime, datetime):
             return cstatus.set_datetime
+        return None
+
+
+class EVSESessionMaxCurrentSensor(_Base, SensorEntity):
+    _attr_translation_key = "session_max_current"
+    _attr_native_unit_of_measurement = UnitOfElectricCurrent.AMPERE
+    _attr_device_class = SensorDeviceClass.CURRENT
+
+    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{self.entry.device.serial_number}_session_max_current"
+
+    @property
+    def native_value(self) -> int | None:
+        cstatus = self.entry.charging_status
+        if cstatus:
+            return cstatus.max_electricity
         return None
 
 
