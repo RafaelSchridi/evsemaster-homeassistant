@@ -116,7 +116,7 @@ These appear in the **Configuration** section of the device page.
 
 #### **Max Amps** (`number.*_max_amps`)
 Sets the maximum charging current for the charger. Range: 6 A to the device hardware limit.
-- Unavailable during an active charging session.
+- **Warning:** Some devices (e.g. Besen B20) support changing this value during an active charging session, while others do not (e.g. Telestar EC311S6) and will return an error. If your device does not support dynamic current adjustment, only change this value when the charger is idle.
 
 #### **Nickname** (`text.*_nickname`)
 Custom name for the charger device for easy identification. Also changes the name displayed on the charger itself.

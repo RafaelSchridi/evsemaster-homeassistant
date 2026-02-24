@@ -72,10 +72,11 @@ class EVSEMaxAmpsNumber(_BaseNumber, NumberEntity):
     @property
     def available(self) -> bool:
         """Check if entity is available."""
-        status: EvseStatus | None = self.entry.status
-        if not (status and self.entry.device and self.entry.device.configured_max_amps is not None):
-            return False
-        return status.current_state != CurrentStateEnum.CHARGING
+        # TODO: Some devices (e.g. Besen B20) support changing amps during charging,
+        # others may error. Consider adding a per-device capability flag.
+        if self.entry.status and self.entry.device and self.entry.device.configured_max_amps is not None:
+            return True
+        return False
 
     async def async_set_native_value(self, value: float) -> None:
         """Set the max amps."""
