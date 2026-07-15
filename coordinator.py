@@ -127,9 +127,11 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
             raise UpdateFailed(f"Error communicating with EVSE: {err}") from err
 
     async def async_shutdown(self) -> None:
+        await super().async_shutdown()
         await self.proto.disconnect()
-        self._connected = False
-        _LOGGER.info("EVSE client disconnected")
+        if self._connected:
+            self._connected = False
+            _LOGGER.info("EVSE client disconnected")
 
 
     async def async_start_charging(
