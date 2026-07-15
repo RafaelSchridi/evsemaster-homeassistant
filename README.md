@@ -7,7 +7,7 @@ The underlying implementation is factored out to a separate Python package: http
 ## Verified Compatible Devices
 - Telestar EC311S6
 - [Besen B20](https://github.com/RafaelSchridi/evsemaster-homeassistant/issues/1)
-- [Morec MC20CAPP / MC20AAPP](https://github.com/RafaelSchridi/evsemaster-homeassistant/issues/6)
+- [Morec MC20CAPP / MC20AAPP](https://github.com/RafaelSchridi/evsemaster-homeassistant/issues/9)
 
 ## Credits
 
