@@ -4,6 +4,39 @@ This Home Assistant integration provides comprehensive control and monitoring of
 
 The underlying implementation is factored out to a separate Python package: https://github.com/RafaelSchridi/evsemaster
 
+## Installation
+If you do not have HACS yet, [follow the official guide](https://hacs.xyz/docs/use/download/download/).
+
+### 1. Install with HACS
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=RafaelSchridi&repository=evsemaster-homeassistant&category=integration)
+
+1. Click the above link to open the repository in HACS.
+2. Click Download
+3. Restart Home Assistant
+
+<details>
+<summary>Or add it manually</summary>
+
+1. Go to **HACS** in the Home Assistant sidebar.
+2. Click the **⋮** menu (top right) → **Custom repositories**.
+3. Repository: `https://github.com/RafaelSchridi/evsemaster-homeassistant`
+4. Type: **Integration**, then click **Add**.
+5. Search for **EVSEMaster** in HACS, open it and click **Download**.
+6. Restart Home Assistant.
+
+</details>
+
+### 2. Add the integration
+
+[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=evsemaster)
+
+Or: **Settings** → **Devices & Services** → **Add Integration** → search for **EVSEMaster**.
+
+You need two things:
+- **Host IP address** of the charger (its IP on your local network — check your router's DHCP client list; give it a static lease while you are there).
+- **EVSE password**: the 6-digit password from the EVSEMaster app. Default on most devices is `123456`.
+
 ## Verified Compatible Devices
 - Telestar EC311S6
 - [Besen B20](https://github.com/RafaelSchridi/evsemaster-homeassistant/issues/1)
