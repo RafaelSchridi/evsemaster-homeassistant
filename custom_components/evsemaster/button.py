@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 
+from evsemaster import CurrentStateEnum, EvseStatus
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -11,11 +12,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .coordinator import EVSEMasterDataUpdateCoordinator
 from .entity import EVSEMasterEntity
-from .evse_loader import data_types
-
-# Import specific classes from the modules
-EvseStatus = data_types.EvseStatus
-CurrentStateEnum = data_types.CurrentStateEnum
 
 _LOGGER = logging.getLogger(__name__)
 

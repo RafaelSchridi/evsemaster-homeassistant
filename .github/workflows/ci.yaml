@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  # The 8th is always after HA's first-Wednesday release.
+  schedule:
+    - cron: "0 4 8 * *"
+  workflow_dispatch:
+
+permissions: {}
 
 jobs:
   lint:
@@ -22,12 +28,18 @@ jobs:
         with:
           python-version: "3.14"
       - run: pip install -r requirements_test.txt
-      - run: pytest tests
+      - run: pytest
 
   hassfest:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          path: custom_components/evsemaster
       - uses: home-assistant/actions/hassfest@master
+
+  hacs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hacs/action@main
+        with:
+          category: integration

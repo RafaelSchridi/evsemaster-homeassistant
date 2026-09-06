@@ -8,15 +8,13 @@ from __future__ import annotations
 
 import logging
 
+from evsemaster import EvseListener
 from homeassistant.components import network
 from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import DOMAIN
-from .evse_loader import listener as listener_module
-
-EvseListener = listener_module.EvseListener
 
 _LOGGER = logging.getLogger(__name__)
 

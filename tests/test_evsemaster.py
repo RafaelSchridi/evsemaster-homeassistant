@@ -4,8 +4,6 @@ import asyncio
 from datetime import timedelta
 
 import pytest
-from custom_components.evsemaster.const import DOMAIN
-from custom_components.evsemaster.coordinator import ESSENTIALS_INTERVAL
 from evsemaster import CommandEnum
 from evsemaster.testing import FakeEvse
 from homeassistant.components.logger.helpers import get_integration_loggers
@@ -16,6 +14,9 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.loader import async_get_integration
 from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+from custom_components.evsemaster.const import DOMAIN
+from custom_components.evsemaster.coordinator import ESSENTIALS_INTERVAL
 
 SERIAL_A = "aa" * 8
 SERIAL_B = "bb" * 8
@@ -98,8 +99,8 @@ async def test_single_charger_sets_up_with_entities(hass, evse_a):
     assert not any("00000000" in uid for uid in ids)
 
     # values pushed by the charger reached the entities
-    assert hass.states.get(ids[f"{SERIAL_A}_current_state"]).state == "READY_TO_CHARGE"
-    assert hass.states.get(ids[f"{SERIAL_A}_plug_state"]).state == "CONNECTED_LOCKED"
+    assert hass.states.get(ids[f"{SERIAL_A}_current_state"]).state == "ready_to_charge"
+    assert hass.states.get(ids[f"{SERIAL_A}_plug_state"]).state == "connected_locked"
     assert hass.states.get(ids[f"{SERIAL_A}_total_kwh"]).state == "1234.56"
     assert hass.states.get(ids[f"{SERIAL_A}_charge_kwh"]).state == "12.34"
     assert hass.states.get(ids[f"{SERIAL_A}_nickname"]).state == "Garage"

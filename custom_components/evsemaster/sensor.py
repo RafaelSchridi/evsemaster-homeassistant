@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from evsemaster import EvseStatus, PlugStateEnum
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -24,12 +25,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .coordinator import EVSEMasterDataUpdateCoordinator
 from .entity import EVSEMasterEntity
-from .evse_loader import data_types
-
-# Import specific classes from the modules
-EvseStatus = data_types.EvseStatus
-ChargingStatus = data_types.ChargingStatus
-PlugStateEnum = data_types.PlugStateEnum
 
 
 async def async_setup_entry(
@@ -71,7 +66,7 @@ class EVSEStateSensor(EVSEMasterEntity, SensorEntity):
     def native_value(self) -> str | None:
         status: EvseStatus = self.entry.status
         if status:
-            return status.current_state.name
+            return status.current_state.name.lower()
 
 
 class EVSECurrentPowerSensor(EVSEMasterEntity, SensorEntity):
@@ -96,7 +91,7 @@ class EVSEPlugStateSensor(EVSEMasterEntity, SensorEntity):
     def native_value(self) -> str | None:
         status: EvseStatus = self.entry.status
         if status and status.plug_state is not None:
-            return PlugStateEnum(status.plug_state).name
+            return PlugStateEnum(status.plug_state).name.lower()
         return None
 
 

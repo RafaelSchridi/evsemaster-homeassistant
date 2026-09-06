@@ -6,6 +6,14 @@ import logging
 from datetime import datetime, timedelta
 from typing import Any
 
+from evsemaster import (
+    ChargingStatus,
+    EvseDevice,
+    EvseDeviceInfo,
+    EvseStatus,
+    now_aware,
+)
+from evsemaster.data_types import BaseSchema
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
@@ -15,17 +23,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
-from .evse_loader import data_types
-from .evse_loader import device as device_module
 from .hub import async_get_listener
-
-# Import specific classes from the modules
-EvseDevice = device_module.EvseDevice
-EvseStatus = data_types.EvseStatus
-ChargingStatus = data_types.ChargingStatus
-BaseSchema = data_types.BaseSchema
-EvseDeviceInfo = data_types.EvseDeviceInfo
-now_aware = data_types.now_aware
 
 _LOGGER = logging.getLogger(__name__)
 

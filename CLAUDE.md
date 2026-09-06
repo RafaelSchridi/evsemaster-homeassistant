@@ -4,16 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-HACS custom integration (domain `evsemaster`, `iot_class: local_push`) for EVSE chargers that use the EVSEMaster app. Integration files live at the repo root (`content_in_root: true` in `hacs.json`). All protocol work is delegated to the `evsemaster` Python package, developed in the sibling repo `RafaelSchridi/evsemaster`.
+HACS custom integration (domain `evsemaster`, `iot_class: local_push`) for EVSE chargers that use the EVSEMaster app. Integration files live in `custom_components/evsemaster/`; the repo root holds only tests, config and packaging. All protocol work is delegated to the `evsemaster` Python package, developed in the sibling repo `RafaelSchridi/evsemaster`.
 
-To run it, place the repo in a Home Assistant instance as `custom_components/evsemaster/`.
+To run it, copy or symlink `custom_components/evsemaster/` into a Home Assistant instance.
 
 - Lint/format: `ruff check` / `ruff format` (config in `ruff.toml`, line-length 120)
-- Test: `pip install -r requirements_test.txt` then **`pytest tests`** — the path argument matters.
-  `tests/pytest.ini` (not a root one) is what makes `tests/` the rootdir; with the rootdir at the
-  repo root, pytest treats the integration's own `__init__.py` as a package to import and every
-  test errors. `tests/conftest.py` symlinks the repo into a temp `custom_components/evsemaster`
-  so Home Assistant can load it under the name it expects.
+- Test: `pip install -r requirements_test.txt` then `pytest` from the repo root.
 - Tests drive the integration end to end against `evsemaster.testing.FakeEvse` chargers on
   loopback (each on its own `127.0.0.x`), covering setup, two chargers at once, service
   targeting, unload, discovery and the config flow.
@@ -24,11 +20,21 @@ To run it, place the repo in a Home Assistant instance as `custom_components/evs
 
 ## Library loading and dev workflow
 
-`evse_loader.py` imports from a local `./evsemaster` package directory first (development), falling back to the installed PyPI package (release). To test unreleased library changes inside HA, copy or symlink `../evsemaster/evsemaster/` into this repo. All modules must import protocol classes via `from .evse_loader import data_types, device, listener` — never import `evsemaster` directly, or the local-first fallback breaks.
+Import protocol classes straight from the package: `from evsemaster import EvseStatus`. Only `BaseSchema` is not in the library's `__all__`, so `coordinator.py` takes it from `evsemaster.data_types`.
 
-That symlink loads the library a *second* time, as `custom_components.evsemaster.evsemaster`, so its classes are not the classes of the top-level `evsemaster` the tests import. `tests/conftest.py` aliases the two in `sys.modules` (`_dedupe_library`); without it the coordinator's `isinstance(payload, EvseStatus)` checks quietly fail and every entity stays `unknown`, with nothing in the log to say why. Run the suite both with and without the symlink before a release — the release path is the one users get.
+To develop against unreleased library changes, `pip install -e ../evsemaster` into the venv that runs the tests or Home Assistant. Do not vendor the library into this repo — an `evsemaster` directory next to the integration's modules gets imported a second time as `custom_components.evsemaster.evsemaster`, and the duplicate classes make the coordinator's `isinstance(payload, EvseStatus)` checks fail silently, leaving every entity `unknown` with nothing in the log.
 
 Releases pin the library version in `manifest.json` requirements (`evsemaster==x.y.z`); bump it together with the manifest `version` field.
+
+## Validation
+
+`.github/workflows/ci.yaml` runs the HACS action and hassfest alongside lint and tests; both must stay green and free of `ignore` keys, since [hacs/default](https://github.com/hacs/default) requires links to passing runs. Reproduce hassfest locally with the same mount their CI uses:
+
+```
+docker run --rm -v "$PWD/custom_components/evsemaster":/github/workspace/custom_components/evsemaster ghcr.io/home-assistant/hassfest:latest
+```
+
+Two of its rules bite easily: `manifest.json` keys must be sorted (`domain`, `name`, then alphabetical), and sensor state values must be lowercase slugs matching the `state` keys in `translations/en.json`.
 
 ## Architecture
 

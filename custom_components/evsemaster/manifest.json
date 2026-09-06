@@ -1,0 +1,23 @@
+{
+  "domain": "evsemaster",
+  "name": "EVSEMaster",
+  "codeowners": [
+    "@RafaelSchridi"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "network"
+  ],
+  "documentation": "https://github.com/RafaelSchridi/evsemaster-homeassistant",
+  "integration_type": "device",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/RafaelSchridi/evsemaster-homeassistant/issues",
+  "loggers": [
+    "evsemaster"
+  ],
+  "quality_scale": "bronze",
+  "requirements": [
+    "evsemaster==2.0.0"
+  ],
+  "version": "1.6.0-beta.2"
+}

@@ -208,6 +208,3 @@ __marimo__/
 .venv
 .node_client
 *.pyc
-
-# symlink used during development
-evsemaster

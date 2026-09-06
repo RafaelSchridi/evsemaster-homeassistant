@@ -31,15 +31,17 @@
       "current_state": {
         "name": "Current State",
         "state": {
-          "EVSE_FAULT": "EVSE Fault",
-          "WAITING_FOR_SWIPE": "Waiting for Swipe",
-          "WAITING_FOR_BUTTON": "Waiting for Button",
-          "NOT_CONNECTED": "Not Connected",
-          "READY_TO_CHARGE": "Ready to Charge",
-          "CHARGING": "Charging",
-          "COMPLETED": "Completed",
-          "COMPLETED_FULL_CHARGE": "Completed Full Charge",
-          "CHARGING_RESERVATION": "Charging Reservation"
+          "evse_fault": "EVSE Fault",
+          "charging_fault_2": "Charging Fault 2",
+          "charging_fault_3": "Charging Fault 3",
+          "waiting_for_swipe": "Waiting for Swipe",
+          "waiting_for_button": "Waiting for Button",
+          "not_connected": "Not Connected",
+          "ready_to_charge": "Ready to Charge",
+          "charging": "Charging",
+          "completed": "Completed",
+          "completed_full_charge": "Completed Full Charge",
+          "charging_reservation": "Charging Reservation"
         }
       },
       "current_power": {
@@ -48,9 +50,9 @@
       "plug_state": {
         "name": "Plug State",
         "state": {
-          "DISCONNECTED": "Disconnected",
-          "CONNECTED_UNLOCKED": "Connected (Unlocked)",
-          "CONNECTED_LOCKED": "Connected (Locked)"
+          "disconnected": "Disconnected",
+          "connected_unlocked": "Connected (Unlocked)",
+          "connected_locked": "Connected (Locked)"
         }
       },
       "inner_temperature": {

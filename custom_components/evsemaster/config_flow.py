@@ -6,16 +6,14 @@ import logging
 from typing import Any
 
 import voluptuous as vol
+from evsemaster import DeviceAlreadyRegistered
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import DOMAIN
-from .evse_loader import listener as listener_module
 from .hub import ListenerError, async_get_listener, async_release_listener
-
-DeviceAlreadyRegistered = listener_module.DeviceAlreadyRegistered
 
 _LOGGER = logging.getLogger(__name__)
 
