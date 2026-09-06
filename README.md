@@ -5,7 +5,7 @@ This Home Assistant integration provides comprehensive control and monitoring of
 The underlying implementation is factored out to a separate Python package: https://github.com/RafaelSchridi/evsemaster
 
 ## LAN Only
-If only need basic control and are within bluetooth range, consider using the [bluetooth integration in home assistant](https://www.home-assistant.io/integrations/besen). This integration is for LAN control only.
+If you only need basic control and are within bluetooth range, consider using the [bluetooth integration in home assistant](https://www.home-assistant.io/integrations/besen). This integration is for LAN control only.
 
 ## Installation
 If you do not have HACS yet, [follow the official guide](https://hacs.xyz/docs/use/download/download/).
@@ -75,8 +75,7 @@ Start a charging session with optional parameters for delayed start and maximum 
 - **`max_amps`** (optional): Maximum charging amperage in Amperes (A). If not specified, the charger's configured max amps will be used. Values above the **configured** max are clamped to it; values above the device **hardware** limit raise an error.
 - **`start_datetime`** (optional): When to start charging. Format: ISO 8601 datetime string. If not specified, charging starts immediately. Needs to be within **24 hours** from now. If timezone is not specified, the local timezone will be assumed.
 - **`duration_hours`** (optional): Maximum charging duration in hours. Range: 1-24 hours. If not specified, charging will continue until manually stopped or the vehicle is fully charged.
-- **`target`**: The charger(s) to control. Targeting a device, an entity or an area all work; the
-  action runs on every EVSEMaster charger the target resolves to.
+- **`target`**: The charger(s) to control. Targeting a device, entity, area and labels all work; the action runs on every EVSEMaster charger the target resolves to.
 
 **Example:**
 ```yaml
