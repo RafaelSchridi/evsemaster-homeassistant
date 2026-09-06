@@ -2,7 +2,7 @@ start_charging:
   name: Start Charging
   description: Start charging with advanced parameters
   target:
-    device:
+    entity:
       integration: evsemaster
   fields:
     max_amps:

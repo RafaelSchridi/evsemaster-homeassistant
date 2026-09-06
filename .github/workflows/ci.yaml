@@ -23,3 +23,11 @@ jobs:
           python-version: "3.14"
       - run: pip install -r requirements_test.txt
       - run: pytest tests
+
+  hassfest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: custom_components/evsemaster
+      - uses: home-assistant/actions/hassfest@master
