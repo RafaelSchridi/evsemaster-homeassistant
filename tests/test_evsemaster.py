@@ -309,3 +309,28 @@ async def test_debug_logging_reaches_the_library(hass):
     """The debug toggle must cover evsemaster.*, where the protocol logs live."""
     integration = await async_get_integration(hass, DOMAIN)
     assert "evsemaster" in await get_integration_loggers(hass, DOMAIN), integration.loggers
+
+
+async def test_a_user_rename_survives_a_nickname_change(hass, evse_a):
+    """The registry follows the charger's nickname, but never overwrites a name the user set."""
+    entry, ok = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
+    assert ok
+    coordinator = entry.runtime_data
+    registry = dr.async_get(hass)
+    device = device_for(hass, entry)
+    assert device.name == "BS20 Garage"
+
+    registry.async_update_device(device.id, name_by_user="Rafael's charger")
+    await hass.async_block_till_done()
+
+    evse_a.nickname = "Driveway"
+    coordinator._essentials_refreshed -= ESSENTIALS_INTERVAL + timedelta(seconds=1)
+    await coordinator.async_refresh()
+    await settle(hass)
+
+    device = device_for(hass, entry)
+    assert device.name == "BS20 Driveway", "the integration should still follow the charger"
+    assert device.name_by_user == "Rafael's charger", "a user rename must not be overwritten"
+    # and the user's name is what the entities actually display
+    ids = entity_ids(hass, entry)
+    assert hass.states.get(ids[f"{SERIAL_A}_current_state"]).name == "Rafael's charger Current State"
