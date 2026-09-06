@@ -1,0 +1,48 @@
+name: Report a working device
+description: Tell us your charger works, so it can be added to the compatibility list.
+title: "[Works] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Two things are needed: what the charger is, and a screenshot
+        proving the integration is talking to it.
+
+  - type: input
+    id: model
+    attributes:
+      label: Brand and model
+      description: As printed on the charger, or as shown on its device page.
+      placeholder: Telestar EC311S6
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Device page screenshot
+      description: |
+        Settings -> Devices & Services -> EVSEMaster -> your charger.
+        Drag the image into this box. Please include the device info panel, which shows the
+        model and firmware the charger reports.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Integration version
+      placeholder: 1.6.0
+    validations:
+      required: false
+
+  - type: dropdown
+    id: phases
+    attributes:
+      label: Single or three phase
+      options:
+        - Single phase
+        - Three phase
+        - Not sure
+    validations:
+      required: false

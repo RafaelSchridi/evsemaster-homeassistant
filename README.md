@@ -46,6 +46,8 @@ You need two things:
 - [Besen B20](https://github.com/RafaelSchridi/evsemaster-homeassistant/issues/1)
 - [Morec MC20CAPP / MC20AAPP](https://github.com/RafaelSchridi/evsemaster-homeassistant/issues/9)
 
+Charger working and not on this list? [Report it here to help others!](https://github.com/RafaelSchridi/evsemaster-homeassistant/issues/new?template=working-device.yml)
+
 ## Credits
 
 This Home Assistant integration is based on the excellent work by **[@johnwoo-nl](https://github.com/johnwoo-nl)** in the **[emproto](https://github.com/johnwoo-nl/emproto)** Node.js library that reverse-engineered the EVSEMaster protocol. All the hard work of understanding the protocol, packet structures, and communication patterns was done by @johnwoo-nl.
