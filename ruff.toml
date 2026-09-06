@@ -9,5 +9,8 @@ ignore = [
     "SIM103",  # guard clauses read better than one compound negated boolean
 ]
 
+[lint.isort]
+known-third-party = ["evsemaster"]
+
 [lint.per-file-ignores]
 "tests/*" = ["SIM117"]

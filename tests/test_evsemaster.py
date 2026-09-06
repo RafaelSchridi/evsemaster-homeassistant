@@ -6,6 +6,8 @@ from datetime import timedelta
 import pytest
 from custom_components.evsemaster.const import DOMAIN
 from custom_components.evsemaster.coordinator import ESSENTIALS_INTERVAL
+from evsemaster import CommandEnum
+from evsemaster.testing import FakeEvse
 from homeassistant.components.logger.helpers import get_integration_loggers
 from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY, ConfigEntryState
 from homeassistant.const import CONF_HOST, CONF_PASSWORD
@@ -14,9 +16,6 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.loader import async_get_integration
 from pytest_homeassistant_custom_component.common import MockConfigEntry
-
-from evsemaster import CommandEnum
-from evsemaster.testing import FakeEvse
 
 SERIAL_A = "aa" * 8
 SERIAL_B = "bb" * 8
