@@ -1,6 +1,7 @@
 """Basic sensors for EVSEMaster integration (minimal)."""
 
 from __future__ import annotations
+
 from datetime import datetime
 
 from homeassistant.components.sensor import (
@@ -9,14 +10,20 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfPower,UnitOfEnergy,UnitOfTemperature, UnitOfTime, UnitOfElectricCurrent, UnitOfElectricPotential
-from homeassistant.helpers.entity import EntityCategory
+from homeassistant.const import (
+    UnitOfElectricCurrent,
+    UnitOfElectricPotential,
+    UnitOfEnergy,
+    UnitOfPower,
+    UnitOfTemperature,
+    UnitOfTime,
+)
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN  # noqa: F401
-from .coordinator import EVSEMasterDataUpdateCoordinator,DataSchema
+from .coordinator import EVSEMasterDataUpdateCoordinator
+from .entity import EVSEMasterEntity
 from .evse_loader import data_types
 
 # Import specific classes from the modules
@@ -56,24 +63,9 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class _Base(CoordinatorEntity[EVSEMasterDataUpdateCoordinator]):
-    _attr_has_entity_name = True
-
-    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_device_info = coordinator.data.device.get_attr_device_info()
-
-    @property
-    def entry(self) -> DataSchema:
-        return self.coordinator.data
-
-
-class EVSEStateSensor(_Base, SensorEntity):
+class EVSEStateSensor(EVSEMasterEntity, SensorEntity):
     _attr_translation_key = "current_state"
-
-    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_unique_id = f"{self.entry.device.serial_number}_current_state"
+    _unique_id_key = "current_state"
 
     @property
     def native_value(self) -> str | None:
@@ -82,15 +74,12 @@ class EVSEStateSensor(_Base, SensorEntity):
             return status.current_state.name
 
 
-class EVSECurrentPowerSensor(_Base, SensorEntity):
+class EVSECurrentPowerSensor(EVSEMasterEntity, SensorEntity):
     _attr_translation_key = "current_power"
+    _unique_id_key = "current_power"
     _attr_native_unit_of_measurement = UnitOfPower.WATT
     _attr_device_class = SensorDeviceClass.POWER
     _attr_state_class = SensorStateClass.MEASUREMENT
-
-    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_unique_id = f"{self.entry.device.serial_number}_current_power"
 
     @property
     def native_value(self) -> int | None:
@@ -99,12 +88,9 @@ class EVSECurrentPowerSensor(_Base, SensorEntity):
             return status.current_power
 
 
-class EVSEPlugStateSensor(_Base, SensorEntity):
+class EVSEPlugStateSensor(EVSEMasterEntity, SensorEntity):
     _attr_translation_key = "plug_state"
-
-    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_unique_id = f"{self.entry.device.serial_number}_plug_state"
+    _unique_id_key = "plug_state"
 
     @property
     def native_value(self) -> str | None:
@@ -114,15 +100,12 @@ class EVSEPlugStateSensor(_Base, SensorEntity):
         return None
 
 
-class EVSEInnerTemperatureSensor(_Base, SensorEntity):
+class EVSEInnerTemperatureSensor(EVSEMasterEntity, SensorEntity):
     _attr_translation_key = "inner_temperature"
+    _unique_id_key = "inner_temperature"
     _attr_device_class = SensorDeviceClass.TEMPERATURE
     # FIXME: you can change the unit on the EVSE
     _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
-
-    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_unique_id = f"{self.entry.device.serial_number}_inner_temperature"
 
     @property
     def native_value(self) -> float | None:
@@ -131,15 +114,12 @@ class EVSEInnerTemperatureSensor(_Base, SensorEntity):
             return status.inner_temperature
 
 
-class EVSEOuterTemperatureSensor(_Base, SensorEntity):
+class EVSEOuterTemperatureSensor(EVSEMasterEntity, SensorEntity):
     _attr_translation_key = "outer_temperature"
+    _unique_id_key = "outer_temperature"
     _attr_device_class = SensorDeviceClass.TEMPERATURE
     # FIXME: you can change the unit on the EVSE
     _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
-
-    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_unique_id = f"{self.entry.device.serial_number}_outer_temperature"
 
     @property
     def native_value(self) -> float | None:
@@ -148,15 +128,12 @@ class EVSEOuterTemperatureSensor(_Base, SensorEntity):
             return status.outer_temperature
 
 
-class EVSETotalKwhSensor(_Base, SensorEntity):
+class EVSETotalKwhSensor(EVSEMasterEntity, SensorEntity):
     _attr_translation_key = "total_kwh"
+    _unique_id_key = "total_kwh"
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
-
-    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_unique_id = f"{self.entry.device.serial_number}_total_kwh"
 
     @property
     def native_value(self) -> float | None:
@@ -165,15 +142,12 @@ class EVSETotalKwhSensor(_Base, SensorEntity):
             return status.total_kwh
 
 
-class EVSEChargeKwhSensor(_Base, SensorEntity):
+class EVSEChargeKwhSensor(EVSEMasterEntity, SensorEntity):
     _attr_translation_key = "charge_kwh"
+    _unique_id_key = "charge_kwh"
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
-
-    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_unique_id = f"{self.entry.device.serial_number}_charge_kwh"
 
     @property
     def native_value(self) -> float | None:
@@ -182,15 +156,12 @@ class EVSEChargeKwhSensor(_Base, SensorEntity):
             return cstatus.charge_kwh
 
 
-class EVSEChargeDurationSensor(_Base, SensorEntity):
+class EVSEChargeDurationSensor(EVSEMasterEntity, SensorEntity):
     _attr_translation_key = "charge_duration"
+    _unique_id_key = "charge_duration"
     _attr_device_class = SensorDeviceClass.DURATION
     _attr_native_unit_of_measurement = UnitOfTime.SECONDS
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
-
-    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_unique_id = f"{self.entry.device.serial_number}_charge_duration"
 
     @property
     def native_value(self) -> int | None:
@@ -199,13 +170,10 @@ class EVSEChargeDurationSensor(_Base, SensorEntity):
             return cstatus.duration_seconds
 
 
-class EVSESessionStartDatetimeSensor(_Base, SensorEntity):
+class EVSESessionStartDatetimeSensor(EVSEMasterEntity, SensorEntity):
     _attr_translation_key = "session_start_datetime"
+    _unique_id_key = "session_start_datetime"
     _attr_device_class = SensorDeviceClass.TIMESTAMP
-
-    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_unique_id = f"{self.entry.device.serial_number}_session_start_datetime"
 
     @property
     def native_value(self) -> datetime | None:
@@ -215,14 +183,11 @@ class EVSESessionStartDatetimeSensor(_Base, SensorEntity):
         return None
 
 
-class EVSESessionMaxCurrentSensor(_Base, SensorEntity):
+class EVSESessionMaxCurrentSensor(EVSEMasterEntity, SensorEntity):
     _attr_translation_key = "session_max_current"
+    _unique_id_key = "session_max_current"
     _attr_native_unit_of_measurement = UnitOfElectricCurrent.AMPERE
     _attr_device_class = SensorDeviceClass.CURRENT
-
-    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_unique_id = f"{self.entry.device.serial_number}_session_max_current"
 
     @property
     def native_value(self) -> int | None:
@@ -232,13 +197,10 @@ class EVSESessionMaxCurrentSensor(_Base, SensorEntity):
         return None
 
 
-class EVSEReservationDatetimeSensor(_Base, SensorEntity):
+class EVSEReservationDatetimeSensor(EVSEMasterEntity, SensorEntity):
     _attr_translation_key = "reservation_datetime"
+    _unique_id_key = "reservation_datetime"
     _attr_device_class = SensorDeviceClass.TIMESTAMP
-
-    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_unique_id = f"{self.entry.device.serial_number}_reservation_datetime"
 
     @property
     def native_value(self) -> datetime | None:
@@ -248,14 +210,11 @@ class EVSEReservationDatetimeSensor(_Base, SensorEntity):
         return None
 
 
-class EVSEReservationDurationSensor(_Base, SensorEntity):
+class EVSEReservationDurationSensor(EVSEMasterEntity, SensorEntity):
     _attr_translation_key = "reservation_duration"
+    _unique_id_key = "reservation_max_duration"
     _attr_device_class = SensorDeviceClass.DURATION
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
-
-    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_unique_id = f"{self.entry.device.serial_number}_reservation_max_duration"
 
     @property
     def native_value(self) -> int | None:
@@ -265,23 +224,21 @@ class EVSEReservationDurationSensor(_Base, SensorEntity):
         return None
 
 
-class EVSETimeDeltaSensor(_Base, SensorEntity):
+class EVSETimeDeltaSensor(EVSEMasterEntity, SensorEntity):
     _attr_translation_key = "time_delta"
+    _unique_id_key = "time_delta"
     _attr_device_class = SensorDeviceClass.DURATION
     _attr_native_unit_of_measurement = UnitOfTime.SECONDS
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_entity_registry_enabled_default = False
 
-    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_unique_id = f"{self.entry.device.serial_number}_time_delta"
-
     @property
-    def native_value(self) -> int:
-        return self.coordinator.proto._time_delta
+    def native_value(self) -> int | None:
+        device = self.coordinator.device
+        return device.time_delta if device else None
 
 
-class _BasePhase(_Base, SensorEntity):
+class _BasePhase(EVSEMasterEntity, SensorEntity):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_entity_registry_enabled_default = False
     _attr_state_class = SensorStateClass.MEASUREMENT
@@ -293,12 +250,9 @@ class _BasePhase(_Base, SensorEntity):
 
 class EVSEL1VoltageSensor(_BasePhase):
     _attr_translation_key = "l1_voltage"
+    _unique_id_key = "l1_voltage"
     _attr_device_class = SensorDeviceClass.VOLTAGE
     _attr_native_unit_of_measurement = UnitOfElectricPotential.VOLT
-
-    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_unique_id = f"{self.entry.device.serial_number}_l1_voltage"
 
     @property
     def native_value(self) -> float | None:
@@ -308,12 +262,9 @@ class EVSEL1VoltageSensor(_BasePhase):
 
 class EVSEL2VoltageSensor(_BasePhase):
     _attr_translation_key = "l2_voltage"
+    _unique_id_key = "l2_voltage"
     _attr_device_class = SensorDeviceClass.VOLTAGE
     _attr_native_unit_of_measurement = UnitOfElectricPotential.VOLT
-
-    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_unique_id = f"{self.entry.device.serial_number}_l2_voltage"
 
     @property
     def native_value(self) -> float | None:
@@ -323,12 +274,9 @@ class EVSEL2VoltageSensor(_BasePhase):
 
 class EVSEL3VoltageSensor(_BasePhase):
     _attr_translation_key = "l3_voltage"
+    _unique_id_key = "l3_voltage"
     _attr_device_class = SensorDeviceClass.VOLTAGE
     _attr_native_unit_of_measurement = UnitOfElectricPotential.VOLT
-
-    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_unique_id = f"{self.entry.device.serial_number}_l3_voltage"
 
     @property
     def native_value(self) -> float | None:
@@ -338,12 +286,9 @@ class EVSEL3VoltageSensor(_BasePhase):
 
 class EVSEL1CurrentSensor(_BasePhase):
     _attr_translation_key = "l1_current"
+    _unique_id_key = "l1_current"
     _attr_device_class = SensorDeviceClass.CURRENT
     _attr_native_unit_of_measurement = UnitOfElectricCurrent.AMPERE
-
-    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_unique_id = f"{self.entry.device.serial_number}_l1_current"
 
     @property
     def native_value(self) -> float | None:
@@ -353,12 +298,9 @@ class EVSEL1CurrentSensor(_BasePhase):
 
 class EVSEL2CurrentSensor(_BasePhase):
     _attr_translation_key = "l2_current"
+    _unique_id_key = "l2_current"
     _attr_device_class = SensorDeviceClass.CURRENT
     _attr_native_unit_of_measurement = UnitOfElectricCurrent.AMPERE
-
-    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_unique_id = f"{self.entry.device.serial_number}_l2_current"
 
     @property
     def native_value(self) -> float | None:
@@ -368,12 +310,9 @@ class EVSEL2CurrentSensor(_BasePhase):
 
 class EVSEL3CurrentSensor(_BasePhase):
     _attr_translation_key = "l3_current"
+    _unique_id_key = "l3_current"
     _attr_device_class = SensorDeviceClass.CURRENT
     _attr_native_unit_of_measurement = UnitOfElectricCurrent.AMPERE
-
-    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_unique_id = f"{self.entry.device.serial_number}_l3_current"
 
     @property
     def native_value(self) -> float | None:

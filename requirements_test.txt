@@ -1,0 +1,4 @@
+# Pinned: this package pins its own Home Assistant version, so an unpinned bump silently
+# retargets the whole suite. 0.13.363 tracks Home Assistant 2026.9.0.
+pytest-homeassistant-custom-component==0.13.363
+ruff==0.16.6

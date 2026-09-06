@@ -9,13 +9,9 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .coordinator import EVSEMasterDataUpdateCoordinator, DataSchema
-from .evse_loader import data_types
-
-# Import specific classes from the modules
-EvseStatus = data_types.EvseStatus
+from .coordinator import EVSEMasterDataUpdateCoordinator
+from .entity import EVSEMasterEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,28 +30,12 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class _BaseText(CoordinatorEntity[EVSEMasterDataUpdateCoordinator]):
-    _attr_has_entity_name = True
-
-    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_device_info = coordinator.data.device.get_attr_device_info()
-
-    @property
-    def entry(self) -> DataSchema:
-        return self.coordinator.data
-
-
-class EVSENicknameText(_BaseText, TextEntity):
+class EVSENicknameText(EVSEMasterEntity, TextEntity):
     _attr_translation_key = "nickname"
+    _unique_id_key = "nickname"
     _attr_icon = "mdi:tag-text"
     _attr_mode = "text"
     _attr_entity_category = EntityCategory.CONFIG
-
-    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        serial = self.entry.device.serial_number
-        self._attr_unique_id = f"{serial}_nickname"
 
     @property
     def native_value(self) -> str | None:

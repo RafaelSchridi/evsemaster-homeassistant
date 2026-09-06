@@ -2,21 +2,25 @@
 
 from __future__ import annotations
 
-from datetime import timedelta,datetime
 import logging
+from datetime import datetime, timedelta
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
-from .evse_loader import evse_protocol, data_types
+from .evse_loader import data_types
+from .evse_loader import device as device_module
+from .hub import async_get_listener
 
 # Import specific classes from the modules
-SimpleEVSEProtocol = evse_protocol.SimpleEVSEProtocol
+EvseDevice = device_module.EvseDevice
 EvseStatus = data_types.EvseStatus
 ChargingStatus = data_types.ChargingStatus
 BaseSchema = data_types.BaseSchema
@@ -25,33 +29,23 @@ now_aware = data_types.now_aware
 
 _LOGGER = logging.getLogger(__name__)
 
-class DeviceSchema(EvseDeviceInfo):
+ESSENTIALS_INTERVAL = timedelta(minutes=30)
 
-    def get_attr_device_info(self) -> dict[str, Any]:
-        """Return device info for Home Assistant."""
-        return {
-            "identifiers": {(DOMAIN, self.serial_number)},
-            "name": self.nickname if self.nickname else self.model,
-            "manufacturer": self.brand,
-            "model": self.model,
-            "serial_number": self.serial_number,
-            "hw_version": self.hardware_version,
-        }
 
 class DataSchema(BaseSchema):
     """Schema for EVSE data."""
 
     status: EvseStatus | None = None
     charging_status: ChargingStatus | None = None
-    device: DeviceSchema = DeviceSchema()
+    device: EvseDeviceInfo = EvseDeviceInfo()
+
 
 class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
-
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         super().__init__(
             hass,
             _LOGGER,
-            name=DOMAIN,
+            name=f"{DOMAIN} {entry.unique_id or entry.data[CONF_HOST]}",
             config_entry=entry,
             update_interval=timedelta(seconds=60),
             update_method=self._async_update_data,
@@ -60,24 +54,48 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
         self.entry = entry
         self.host = entry.data[CONF_HOST]
         self.password = entry.data[CONF_PASSWORD]
-        self._connected = False
         self.data: DataSchema = DataSchema()
-        self.secondary_timer = datetime.utcnow()
+        self.device: EvseDevice | None = None
+        self._essentials_refreshed = dt_util.utcnow()
 
-        self.proto = SimpleEVSEProtocol(
-            host=self.host,
-            password=self.password,
-            event_callback=self._on_protocol_event,
-        )
+    async def async_init(self) -> None:
+        """Register this charger with the shared listener (cannot await in __init__)."""
+        listener = await async_get_listener(self.hass)
+        self.device = await listener.async_add_device(self.host, self.password, on_event=self._on_protocol_event)
 
-    def _ensure_serial(self) -> tuple[str, DataSchema]:
-        """Ensure the serial number is set in the data schema."""
-        proto_device = self.proto.get_latest_device_info()
+    @property
+    def unique_id(self) -> str:
+        """This charger's unique_id, as stored on the config entry."""
+        return self.entry.unique_id
+
+    @property
+    def device_name(self) -> str | None:
+        """Model and nickname together, so several chargers of one model stay distinguishable."""
+        device = self.data.device
+        return " ".join(filter(None, (device.model, device.nickname))) or None
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """Device registry entry for this charger."""
+        device = self.data.device
+        return {
+            "identifiers": {(DOMAIN, self.unique_id)},
+            "name": self.device_name,
+            "manufacturer": device.brand,
+            "model": device.model,
+            "serial_number": self.unique_id,
+            "hw_version": device.hardware_version,
+        }
+
+    def _ensure_serial(self) -> None:
+        """Copy freshly parsed device info into the coordinator data."""
+        proto_device = self.device.get_latest_device_info() if self.device else None
         if proto_device and proto_device.serial_number != self.data.device.serial_number:
-            self.data.device = DeviceSchema.model_validate(proto_device.model_dump())
+            self.data.device = proto_device
 
     def _on_protocol_event(self, event_type: str, payload: Any) -> None:
         """Receive local-push events from protocol and push to HA."""
+
         async def _handle() -> None:
             self._ensure_serial()
             changed = False
@@ -88,51 +106,66 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
                 self.data.charging_status = payload
                 changed = True
             elif event_type == EvseDeviceInfo.__name__ and isinstance(payload, EvseDeviceInfo):
-                self.data.device = DeviceSchema.model_validate(payload.model_dump())
+                self.data.device = payload
+                self._async_follow_device_name()
                 changed = True
             if changed:
                 self.async_set_updated_data(self.data)
+
         self.hass.async_create_task(_handle())
 
-    async def _async_update_data(self) -> dict[str, Any]:
-        """Ensure connection and login; return latest cached snapshot."""
+    async def _async_update_data(self) -> DataSchema:
+        """Ensure the session is alive; data itself arrives via the push callback."""
         try:
-            if not self._connected:
-                ok = await self.proto.connect()
-                if not ok:
-                    raise UpdateFailed("Failed to create sockets to connect to EVSE")
-                self._connected = True
-                _LOGGER.info("Connected to EVSE on %s", self.host)
-
-            if not self.proto.is_logged_in:
-                success = await self.proto.login()
-                if not success:
+            if not self.device.is_logged_in:
+                if not await self.device.login():
                     raise UpdateFailed("Failed to login to EVSE")
-                _LOGGER.info("Logged in to EVSE")
+                _LOGGER.info("Logged in to EVSE %s", self.host)
+                self._async_adopt_serial()
 
             # data is pushed via callback; just request an update
-            await self.proto.request_status()
+            await self.device.request_status()
             # every x minutes request full device info to catch changes
-            if (self.secondary_timer + timedelta(minutes=30) < datetime.utcnow()):
-                success = await self.proto.request_essentials()
-                if not success:
-                     _LOGGER.warning("Failed to refresh device info from EVSE")
-                else:
-                    _LOGGER.info("Refreshed device info from EVSE")
+            if self._essentials_refreshed + ESSENTIALS_INTERVAL < dt_util.utcnow():
+                self._essentials_refreshed = dt_util.utcnow()
+                await self.device.request_essentials()
+                _LOGGER.debug("Refreshed device info from EVSE")
 
             self._ensure_serial()
             return self.data
+        except UpdateFailed:
+            raise
         except Exception as err:
             _LOGGER.error("Error updating EVSE data: %s", err)
             raise UpdateFailed(f"Error communicating with EVSE: {err}") from err
 
+    def _async_follow_device_name(self) -> None:
+        """Re-apply the device name, whose parts arrive after the device is registered."""
+        name = self.device_name
+        if not name:
+            return
+        registry = dr.async_get(self.hass)
+        # scoped to this entry rather than looked up by identifier: identifiers are no longer
+        # unique across config entries, and async_get_device(identifiers=...) is on its way out
+        for device in dr.async_entries_for_config_entry(registry, self.entry.entry_id):
+            if device.name != name:
+                registry.async_update_device(device.id, name=name)
+
+    def _async_adopt_serial(self) -> None:
+        """Entries created before multi-device support have no unique id; backfill the serial."""
+        if self.entry.unique_id or not self.device.serial:
+            return
+        _LOGGER.info("Adopting serial %s as unique id for %s", self.device.serial, self.host)
+        self.hass.config_entries.async_update_entry(self.entry, unique_id=self.device.serial)
+
     async def async_shutdown(self) -> None:
         await super().async_shutdown()
-        await self.proto.disconnect()
-        if self._connected:
-            self._connected = False
+        if self.device:
+            listener = self.hass.data.get(DOMAIN)
+            if listener:
+                await listener.async_remove_device(self.device)
+            self.device = None
             _LOGGER.info("EVSE client disconnected")
-
 
     async def async_start_charging(
         self,
@@ -147,8 +180,8 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
                 minutes = int(duration_hours * 60)
             if isinstance(start_datetime, str):
                 start_datetime = datetime.fromisoformat(start_datetime)
-                if start_datetime.tzinfo is None:
-                    start_datetime = start_datetime.replace(tzinfo=datetime.now().astimezone().tzinfo)
+            if start_datetime and start_datetime.tzinfo is None:
+                start_datetime = start_datetime.replace(tzinfo=now_aware().tzinfo)
             if start_datetime and start_datetime > now_aware() + timedelta(hours=24):
                 raise ValueError("Reservation cannot be scheduled more than 24 hours in the future")
             if max_amps is not None:
@@ -159,37 +192,39 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
                 if max_amps > self.data.device.configured_max_amps:
                     _LOGGER.warning(
                         "Requested max_amps %d exceeds configured max %d, clamping",
-                        max_amps, self.data.device.configured_max_amps,
+                        max_amps,
+                        self.data.device.configured_max_amps,
                     )
                     max_amps = self.data.device.configured_max_amps
             _LOGGER.info(
-                f"Starting charging on {self.data.device.serial_number}: amps={max_amps}, duration={minutes}m, start={start_datetime}"
+                f"Starting charging on {self.unique_id}: amps={max_amps}, duration={minutes}m, start={start_datetime}"
             )
-            return await self.proto.start_charging(max_amps, start_datetime, minutes)
+            return await self.device.start_charging(max_amps, start_datetime, minutes)
         except Exception as err:
-            _LOGGER.error("Error starting charging on %s: %s", self.data.device.serial_number, err)
-            raise HomeAssistantError(str(err))
+            _LOGGER.error("Error starting charging on %s: %s", self.unique_id, err)
+            raise HomeAssistantError(str(err)) from err
 
     async def async_stop_charging(self) -> bool:
         try:
-            return await self.proto.stop_charging()
+            return await self.device.stop_charging()
         except Exception as err:
-            _LOGGER.error("Error stopping charging on %s: %s", self.data.device.serial_number, err)
-            return False
-
+            # surfaced, not swallowed: a stop that silently does nothing leaves the car drawing
+            _LOGGER.error("Error stopping charging on %s: %s", self.unique_id, err)
+            raise HomeAssistantError(str(err)) from err
 
     async def async_set_nickname(self, nickname: str) -> bool:
         """Set device nickname."""
         try:
-            return await self.proto.set_nickname(nickname)
+            return await self.device.set_nickname(nickname)
         except Exception as err:
-            _LOGGER.error("Error setting nickname on %s: %s", self.data.device.serial_number, err)
-            return False
+            _LOGGER.error("Error setting nickname on %s: %s", self.unique_id, err)
+            raise HomeAssistantError(str(err)) from err
 
     async def async_set_max_amps(self, amperage: int) -> bool:
         """Set maximum output amperage."""
         try:
-            return await self.proto.set_output_amperage(amperage)
+            return await self.device.set_output_amperage(amperage)
         except Exception as err:
-            _LOGGER.error("Error setting max amperage on %s: %s", self.data.device.serial_number, err)
-            return False
+            # surfaced, not swallowed: a model that faults on a mid-charge reduction refuses here
+            _LOGGER.error("Error setting max amperage on %s: %s", self.unique_id, err)
+            raise HomeAssistantError(str(err)) from err

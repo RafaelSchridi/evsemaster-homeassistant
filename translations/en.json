@@ -8,6 +8,13 @@
           "host": "Host IP Address",
           "password": "EVSE Password (6 digits)"
         }
+      },
+      "discovery_confirm": {
+        "title": "EVSEMaster charger found",
+        "description": "Set up {name} at {host}. Enter the password from the EVSEMaster app (default 123456).",
+        "data": {
+          "password": "EVSE Password (6 digits)"
+        }
       }
     },
     "error": {

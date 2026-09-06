@@ -1,0 +1,13 @@
+# Matches the evsemaster library's settings; py314 is the floor HA 2026.3 sets.
+line-length = 120
+target-version = "py314"
+
+[lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+ignore = [
+    "B008",  # HA passes callables as defaults all over the place
+    "SIM103",  # guard clauses read better than one compound negated boolean
+]
+
+[lint.per-file-ignores]
+"tests/*" = ["SIM117"]

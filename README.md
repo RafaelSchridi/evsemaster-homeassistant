@@ -4,6 +4,9 @@ This Home Assistant integration provides comprehensive control and monitoring of
 
 The underlying implementation is factored out to a separate Python package: https://github.com/RafaelSchridi/evsemaster
 
+## LAN Only
+If only need basic control and are within bluetooth range, consider using the [bluetooth integration in home assistant](https://www.home-assistant.io/integrations/besen). This integration is for LAN control only.
+
 ## Installation
 If you do not have HACS yet, [follow the official guide](https://hacs.xyz/docs/use/download/download/).
 
@@ -37,6 +40,7 @@ You need two things:
 - **Host IP address** of the charger (its IP on your local network — check your router's DHCP client list; give it a static lease while you are there).
 - **EVSE password**: the 6-digit password from the EVSEMaster app. Default on most devices is `123456`.
 
+
 ## Verified Compatible Devices
 - Telestar EC311S6
 - [Besen B20](https://github.com/RafaelSchridi/evsemaster-homeassistant/issues/1)
@@ -51,9 +55,13 @@ This Home Assistant integration is based on the excellent work by **[@johnwoo-nl
 - Various sensors for monitoring charger status, energy consumption, and more (see specifics below).
 - Start/stop charging control.
 - Custom Action to start a single charging session with start delay and optional stop time.
+- Multiple chargers per Home Assistant instance, each its own device.
+- Chargers announce themselves, so extra ones are discovered automatically (see below).
 
 # Limitations
-- Currently supports only a single charger per Home Assistant instance.
+- Discovery only finds *additional* chargers: Home Assistant does not load this integration until one charger is set up, so the first one is always added by hand.
+- Your Home Assistant must be able to receive the chargers' broadcast packets on UDP port 28376.
+  A separate VLAN, or Docker bridge networking without `network_mode: host`, blocks them; without those broadcasts discovery and automatic re-login do not work.
 
 ---
 
@@ -67,7 +75,8 @@ Start a charging session with optional parameters for delayed start and maximum 
 - **`max_amps`** (optional): Maximum charging amperage in Amperes (A). If not specified, the charger's configured max amps will be used. Values above the **configured** max are clamped to it; values above the device **hardware** limit raise an error.
 - **`start_datetime`** (optional): When to start charging. Format: ISO 8601 datetime string. If not specified, charging starts immediately. Needs to be within **24 hours** from now. If timezone is not specified, the local timezone will be assumed.
 - **`duration_hours`** (optional): Maximum charging duration in hours. Range: 1-24 hours. If not specified, charging will continue until manually stopped or the vehicle is fully charged.
-- **`target.device_id`**: The device ID of the charger to control. Currently, only a single charger is supported per Home Assistant instance. so nothing is done with this **yet**.
+- **`target`**: The charger(s) to control. Targeting a device, an entity or an area all work; the
+  action runs on every EVSEMaster charger the target resolves to.
 
 **Example:**
 ```yaml

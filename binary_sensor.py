@@ -9,9 +9,9 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .coordinator import EVSEMasterDataUpdateCoordinator, DataSchema
+from .coordinator import EVSEMasterDataUpdateCoordinator
+from .entity import EVSEMasterEntity
 from .evse_loader import data_types
 
 # Import specific classes from the modules
@@ -35,27 +35,10 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class _Base(CoordinatorEntity[EVSEMasterDataUpdateCoordinator]):
-    _attr_has_entity_name = True
-
-    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_device_info = coordinator.data.device.get_attr_device_info()
-
-    @property
-    def entry(self) -> DataSchema:
-        return self.coordinator.data
-
-
-class EVSEPluggedInBinarySensor(_Base, BinarySensorEntity):
+class EVSEPluggedInBinarySensor(EVSEMasterEntity, BinarySensorEntity):
     _attr_translation_key = "plug_state"
+    _unique_id_key = "plug_state_binary"
     _attr_device_class = BinarySensorDeviceClass.PLUG
-
-
-    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        serial = self.entry.device.serial_number
-        self._attr_unique_id = f"{serial}_plug_state_binary"
 
     @property
     def is_on(self) -> bool:
@@ -65,14 +48,10 @@ class EVSEPluggedInBinarySensor(_Base, BinarySensorEntity):
         return False
 
 
-class EVSEChargingBinarySensor(_Base, BinarySensorEntity):
+class EVSEChargingBinarySensor(EVSEMasterEntity, BinarySensorEntity):
     _attr_translation_key = "charging_state"
+    _unique_id_key = "charging_binary"
     _attr_device_class = BinarySensorDeviceClass.BATTERY_CHARGING
-
-    def __init__(self, coordinator: EVSEMasterDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        serial = self.entry.device.serial_number
-        self._attr_unique_id = f"{serial}_charging_binary"
 
     @property
     def is_on(self) -> bool:
