@@ -272,6 +272,7 @@ async def test_session_recovers_from_a_broadcast(hass, evse_a):
     # the charger dropped our session and stopped sending headings
     evse_a.stop()
     device._last_alive = None
+    await asyncio.sleep(0.5)
     assert not device.is_logged_in
 
     evse_a2 = await FakeEvse(SERIAL_A, ip="127.0.0.1", nickname="Garage").start()
