@@ -4,12 +4,12 @@ import asyncio
 from datetime import timedelta
 
 import pytest
-from evsemaster import CommandEnum
+from evsemaster import CommandEnum, CurrentStateEnum
 from evsemaster.testing import FakeEvse
 from homeassistant.components.logger.helpers import get_integration_loggers
 from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY, ConfigEntryState
-from homeassistant.const import CONF_HOST, CONF_PASSWORD
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.const import CONF_HOST, CONF_PASSWORD, STATE_UNAVAILABLE
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.loader import async_get_integration
@@ -127,6 +127,22 @@ async def test_a_failing_stop_surfaces_in_home_assistant(hass, evse_a):
         await hass.services.async_call(
             "button", "press", {"entity_id": ids[f"{SERIAL_A}_stop_charging_button"]}, blocking=True
         )
+
+
+async def test_stop_without_a_car_is_refused_not_hidden(hass):
+    evse = await FakeEvse(SERIAL_A, ip="127.0.0.1", state=CurrentStateEnum.NOT_CONNECTED).start()
+    try:
+        entry, ok = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
+        assert ok
+        button = entity_ids(hass, entry)[f"{SERIAL_A}_stop_charging_button"]
+        assert hass.states.get(button).state != STATE_UNAVAILABLE
+
+        with pytest.raises(ServiceValidationError) as err:
+            await hass.services.async_call("button", "press", {"entity_id": button}, blocking=True)
+        assert err.value.translation_key == "nothing_to_stop"
+        assert CommandEnum.CHARGE_STOP_REQUEST not in evse.received
+    finally:
+        evse.stop()
 
 
 async def test_single_phase_charger_reports_status(hass, evse_b):

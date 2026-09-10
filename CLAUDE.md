@@ -63,3 +63,6 @@ Two of its rules bite easily: `manifest.json` keys must be sorted (`domain`, `na
   `async_set_max_amps` raises `HomeAssistantError` rather than swallowing the refusal. The charger
   echoes a mid-charge change back within seconds and then ignores it, so an enabled control would
   display a limit that is not the one being delivered.
+- Stop charging: the button stays available with no car connected; pressing it in `NOT_CONNECTED`
+  raises `ServiceValidationError` (`nothing_to_stop`) instead. Availability means "charger reachable",
+  not "action meaningful": HA skips unavailable entities in service calls without an error.

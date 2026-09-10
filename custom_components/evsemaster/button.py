@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import logging
-
-from evsemaster import CurrentStateEnum, EvseStatus
+from evsemaster import EvseStatus
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -12,8 +10,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .coordinator import EVSEMasterDataUpdateCoordinator
 from .entity import EVSEMasterEntity
-
-_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -62,9 +58,7 @@ class EVSEStopChargingButton(EVSEMasterEntity, ButtonEntity):
     @property
     def available(self) -> bool:
         status: EvseStatus | None = self.entry.status
-        if status and status.current_state is not None:
-            return status.current_state != CurrentStateEnum.NOT_CONNECTED
-        return False
+        return bool(status and status.current_state is not None)
 
     async def async_press(self) -> None:
         await self.coordinator.async_stop_charging()

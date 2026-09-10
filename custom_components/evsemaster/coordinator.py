@@ -8,6 +8,7 @@ from typing import Any
 
 from evsemaster import (
     ChargingStatus,
+    CurrentStateEnum,
     EvseDevice,
     EvseDeviceInfo,
     EvseStatus,
@@ -17,7 +18,7 @@ from evsemaster.data_types import BaseSchema
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
@@ -203,10 +204,12 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
             raise HomeAssistantError(str(err)) from err
 
     async def async_stop_charging(self) -> bool:
+        status = self.data.status
+        if status and status.current_state == CurrentStateEnum.NOT_CONNECTED:
+            raise ServiceValidationError(translation_domain=DOMAIN, translation_key="nothing_to_stop")
         try:
             return await self.device.stop_charging()
         except Exception as err:
-            # surfaced, not swallowed: a stop that silently does nothing leaves the car drawing
             _LOGGER.error("Error stopping charging on %s: %s", self.unique_id, err)
             raise HomeAssistantError(str(err)) from err
 
@@ -223,6 +226,5 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
         try:
             return await self.device.set_output_amperage(amperage)
         except Exception as err:
-            # surfaced, not swallowed: a model that faults on a mid-charge reduction refuses here
             _LOGGER.error("Error setting max amperage on %s: %s", self.unique_id, err)
             raise HomeAssistantError(str(err)) from err
