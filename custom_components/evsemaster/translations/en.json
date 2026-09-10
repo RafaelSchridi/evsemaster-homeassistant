@@ -85,6 +85,9 @@
       "time_delta": {
         "name": "Device Clock Offset"
       },
+      "last_alive": {
+        "name": "Last Seen"
+      },
       "l1_voltage": {
         "name": "L1 Voltage"
       },
@@ -129,6 +132,35 @@
       "max_amps": {
         "name": "Max Amps"
       }
+    }
+  },
+  "exceptions": {
+    "not_responding": {
+      "message": "{device} is not responding, so the command was not sent."
+    },
+    "stop_failed": {
+      "message": "Could not stop charging on {device}: the charger is not responding. The car may still be charging."
+    },
+    "nothing_to_stop": {
+      "message": "{device}: no car is connected and no charge is scheduled, so there is nothing to stop."
+    },
+    "unsupported_operation": {
+      "message": "{device}: {error}"
+    },
+    "invalid_value": {
+      "message": "{device} rejected the value: {error}"
+    },
+    "reservation_too_far": {
+      "message": "{device}: a reservation cannot start more than 24 hours from now."
+    },
+    "max_amps_above_limit": {
+      "message": "{device} supports at most {limit} A; {max_amps} A was requested."
+    },
+    "no_matching_charger": {
+      "message": "No EVSEMaster charger matched the target of this action."
+    },
+    "start_failed": {
+      "message": "Charging did not start on every charger: {errors}"
     }
   }
 }

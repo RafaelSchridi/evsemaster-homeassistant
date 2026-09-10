@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -12,16 +14,18 @@ from evsemaster import (
     EvseDevice,
     EvseDeviceInfo,
     EvseStatus,
+    NotLoggedInError,
+    UnsupportedOperationError,
     now_aware,
 )
 from evsemaster.data_types import BaseSchema
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
+from homeassistant.core import CALLBACK_TYPE, HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 from .hub import async_get_listener
@@ -55,12 +59,15 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
         self.password = entry.data[CONF_PASSWORD]
         self.data: DataSchema = DataSchema()
         self.device: EvseDevice | None = None
-        self._essentials_refreshed = dt_util.utcnow()
+        self._unsub_essentials: CALLBACK_TYPE | None = None
 
     async def async_init(self) -> None:
         """Register this charger with the shared listener (cannot await in __init__)."""
         listener = await async_get_listener(self.hass)
         self.device = await listener.async_add_device(self.host, self.password, on_event=self._on_protocol_event)
+        self._unsub_essentials = async_track_time_interval(
+            self.hass, self._async_refresh_essentials, ESSENTIALS_INTERVAL
+        )
 
     @property
     def unique_id(self) -> str:
@@ -72,6 +79,14 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
         """Model and nickname together, so several chargers of one model stay distinguishable."""
         device = self.data.device
         return " ".join(filter(None, (device.model, device.nickname))) or None
+
+    @property
+    def display_name(self) -> str:
+        """This charger as the user sees it in HA, a rename included."""
+        devices = dr.async_entries_for_config_entry(dr.async_get(self.hass), self.entry.entry_id)
+        if not devices:
+            return self.device_name or self.host
+        return devices[0].name_by_user or devices[0].name or self.host
 
     @property
     def device_info(self) -> dict[str, Any]:
@@ -114,7 +129,7 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
         self.hass.async_create_task(_handle())
 
     async def _async_update_data(self) -> DataSchema:
-        """Ensure the session is alive; data itself arrives via the push callback."""
+        """Watchdog: every push restarts the countdown, so this only runs after 60s without one."""
         try:
             if not self.device.is_logged_in:
                 if not await self.device.login():
@@ -124,12 +139,6 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
 
             # data is pushed via callback; just request an update
             await self.device.request_status()
-            # every x minutes request full device info to catch changes
-            if self._essentials_refreshed + ESSENTIALS_INTERVAL < dt_util.utcnow():
-                self._essentials_refreshed = dt_util.utcnow()
-                await self.device.request_essentials()
-                _LOGGER.debug("Refreshed device info from EVSE")
-
             self._ensure_serial()
             return self.data
         except UpdateFailed:
@@ -137,6 +146,12 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
         except Exception as err:
             _LOGGER.error("Error updating EVSE data: %s", err)
             raise UpdateFailed(f"Error communicating with EVSE: {err}") from err
+
+    async def _async_refresh_essentials(self, _now: datetime) -> None:
+        """Re-read nickname and configured amps; the poll rarely runs while pushes flow."""
+        if not self.device or not self.device.is_logged_in:
+            return
+        await self.device.request_essentials()
 
     def _async_follow_device_name(self) -> None:
         """Re-apply the device name, whose parts arrive after the device is registered."""
@@ -159,12 +174,38 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
 
     async def async_shutdown(self) -> None:
         await super().async_shutdown()
+        if self._unsub_essentials:
+            self._unsub_essentials()
+            self._unsub_essentials = None
         if self.device:
             listener = self.hass.data.get(DOMAIN)
             if listener:
                 await listener.async_remove_device(self.device)
             self.device = None
             _LOGGER.info("EVSE client disconnected")
+
+    @contextmanager
+    def _action_errors(self, unreachable_key: str = "not_responding") -> Iterator[dict[str, str]]:
+        """Turn library refusals into translated errors that name this charger."""
+        placeholders = {"device": self.display_name}
+        try:
+            yield placeholders
+        except NotLoggedInError as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN, translation_key=unreachable_key, translation_placeholders=placeholders
+            ) from err
+        except UnsupportedOperationError as err:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="unsupported_operation",
+                translation_placeholders={**placeholders, "error": str(err)},
+            ) from err
+        except ValueError as err:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="invalid_value",
+                translation_placeholders={**placeholders, "error": str(err)},
+            ) from err
 
     async def async_start_charging(
         self,
@@ -173,7 +214,7 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
         duration_hours: float | None = None,
     ) -> bool:
         """Start charging with advanced parameters."""
-        try:
+        with self._action_errors() as placeholders:
             minutes = None
             if duration_hours is not None:
                 minutes = int(duration_hours * 60)
@@ -182,11 +223,18 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
             if start_datetime and start_datetime.tzinfo is None:
                 start_datetime = start_datetime.replace(tzinfo=now_aware().tzinfo)
             if start_datetime and start_datetime > now_aware() + timedelta(hours=24):
-                raise ValueError("Reservation cannot be scheduled more than 24 hours in the future")
+                raise ServiceValidationError(
+                    translation_domain=DOMAIN,
+                    translation_key="reservation_too_far",
+                    translation_placeholders=placeholders,
+                )
             if max_amps is not None:
-                if max_amps > self.data.device.max_amps:
-                    raise ValueError(
-                        f"Requested max_amps {max_amps} exceeds device hardware limit of {self.data.device.max_amps} A"
+                limit = self.data.device.max_amps
+                if max_amps > limit:
+                    raise ServiceValidationError(
+                        translation_domain=DOMAIN,
+                        translation_key="max_amps_above_limit",
+                        translation_placeholders={**placeholders, "max_amps": str(max_amps), "limit": str(limit)},
                     )
                 if max_amps > self.data.device.configured_max_amps:
                     _LOGGER.warning(
@@ -199,32 +247,22 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
                 f"Starting charging on {self.unique_id}: amps={max_amps}, duration={minutes}m, start={start_datetime}"
             )
             return await self.device.start_charging(max_amps, start_datetime, minutes)
-        except Exception as err:
-            _LOGGER.error("Error starting charging on %s: %s", self.unique_id, err)
-            raise HomeAssistantError(str(err)) from err
 
     async def async_stop_charging(self) -> bool:
-        status = self.data.status
-        if status and status.current_state == CurrentStateEnum.NOT_CONNECTED:
-            raise ServiceValidationError(translation_domain=DOMAIN, translation_key="nothing_to_stop")
-        try:
+        with self._action_errors("stop_failed") as placeholders:
+            status = self.data.status
+            if status and status.current_state == CurrentStateEnum.NOT_CONNECTED:
+                raise ServiceValidationError(
+                    translation_domain=DOMAIN, translation_key="nothing_to_stop", translation_placeholders=placeholders
+                )
             return await self.device.stop_charging()
-        except Exception as err:
-            _LOGGER.error("Error stopping charging on %s: %s", self.unique_id, err)
-            raise HomeAssistantError(str(err)) from err
 
     async def async_set_nickname(self, nickname: str) -> bool:
         """Set device nickname."""
-        try:
+        with self._action_errors():
             return await self.device.set_nickname(nickname)
-        except Exception as err:
-            _LOGGER.error("Error setting nickname on %s: %s", self.unique_id, err)
-            raise HomeAssistantError(str(err)) from err
 
     async def async_set_max_amps(self, amperage: int) -> bool:
         """Set maximum output amperage."""
-        try:
+        with self._action_errors():
             return await self.device.set_output_amperage(amperage)
-        except Exception as err:
-            _LOGGER.error("Error setting max amperage on %s: %s", self.unique_id, err)
-            raise HomeAssistantError(str(err)) from err

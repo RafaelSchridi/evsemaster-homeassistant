@@ -8,12 +8,13 @@ from evsemaster import CommandEnum, CurrentStateEnum
 from evsemaster.testing import FakeEvse
 from homeassistant.components.logger.helpers import get_integration_loggers
 from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY, ConfigEntryState
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, STATE_UNAVAILABLE
+from homeassistant.const import CONF_HOST, CONF_PASSWORD, STATE_UNAVAILABLE, EntityCategory
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.loader import async_get_integration
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from homeassistant.util import dt as dt_util
+from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
 from custom_components.evsemaster.const import DOMAIN
 from custom_components.evsemaster.coordinator import ESSENTIALS_INTERVAL
@@ -94,7 +95,7 @@ async def test_single_charger_sets_up_with_entities(hass, evse_a):
     assert coordinator.device.send_port == evse_a.port
 
     ids = entity_ids(hass, entry)
-    assert len(ids) == 25, sorted(ids)
+    assert len(ids) == 26, sorted(ids)
     assert all(uid.startswith(f"{SERIAL_A}_") for uid in ids), sorted(ids)
     assert not any("00000000" in uid for uid in ids)
 
@@ -123,10 +124,12 @@ async def test_a_failing_stop_surfaces_in_home_assistant(hass, evse_a):
     ids = entity_ids(hass, entry)
 
     entry.runtime_data.device._authenticated = False  # session lost since the last poll
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(HomeAssistantError) as err:
         await hass.services.async_call(
             "button", "press", {"entity_id": ids[f"{SERIAL_A}_stop_charging_button"]}, blocking=True
         )
+    assert err.value.translation_key == "stop_failed"
+    assert err.value.translation_placeholders == {"device": "BS20 Garage"}
 
 
 async def test_stop_without_a_car_is_refused_not_hidden(hass):
@@ -140,6 +143,7 @@ async def test_stop_without_a_car_is_refused_not_hidden(hass):
         with pytest.raises(ServiceValidationError) as err:
             await hass.services.async_call("button", "press", {"entity_id": button}, blocking=True)
         assert err.value.translation_key == "nothing_to_stop"
+        assert err.value.translation_placeholders == {"device": "BS20"}
         assert CommandEnum.CHARGE_STOP_REQUEST not in evse.received
     finally:
         evse.stop()
@@ -189,9 +193,55 @@ async def test_two_chargers_are_independent(hass, evse_a, evse_b):
 
 async def test_service_without_a_matching_target_errors(hass, evse_a):
     await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
-    with pytest.raises(Exception) as err:
+    with pytest.raises(ServiceValidationError) as err:
         await hass.services.async_call(DOMAIN, "start_charging", {"device_id": "does-not-exist"}, blocking=True)
-    assert "EVSEMaster" in str(err.value) or "not found" in str(err.value).lower()
+    assert err.value.translation_key == "no_matching_charger"
+
+
+async def test_errors_name_the_charger_as_the_user_sees_it(hass, evse_a):
+    entry, ok = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
+    assert ok
+    device = device_for(hass, entry)
+    dr.async_get(hass).async_update_device(device.id, name_by_user="Driveway")
+
+    too_far = (dt_util.now() + timedelta(hours=25)).isoformat()
+    with pytest.raises(ServiceValidationError) as err:
+        await hass.services.async_call(
+            DOMAIN, "start_charging", {"device_id": device.id, "start_datetime": too_far}, blocking=True
+        )
+    assert err.value.translation_key == "reservation_too_far"
+    assert err.value.translation_placeholders == {"device": "Driveway"}
+    assert CommandEnum.CHARGE_START_REQUEST not in evse_a.received
+
+
+async def test_start_charging_reaches_every_charger_before_reporting_a_failure(hass, evse_a, evse_b):
+    entry_a, _ = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A, title="A")
+    entry_b, _ = await add_entry(hass, "127.0.0.2", unique_id=SERIAL_B, title="B")
+    targets = {"device_id": [device_for(hass, entry_a).id, device_for(hass, entry_b).id]}
+
+    # one charger down: the other still starts, and the error is that charger's own
+    entry_a.runtime_data.device._authenticated = False
+    evse_b.received.clear()
+    with pytest.raises(HomeAssistantError) as err:
+        await hass.services.async_call(DOMAIN, "start_charging", targets, blocking=True)
+    assert err.value.translation_key == "not_responding"
+    assert err.value.translation_placeholders == {"device": "BS20 Garage"}
+    assert await until(hass, lambda: CommandEnum.CHARGE_START_REQUEST in evse_b.received), "B was skipped"
+
+    # both down: one error that names each (also proves the messages render from en.json)
+    entry_b.runtime_data.device._authenticated = False
+    with pytest.raises(HomeAssistantError) as err:
+        await hass.services.async_call(DOMAIN, "start_charging", targets, blocking=True)
+    assert err.value.translation_key == "start_failed"
+    assert "BS20 Garage" in str(err.value) and "BS20 Carport" in str(err.value)
+
+
+async def test_last_seen_sensor_is_a_disabled_diagnostic(hass, evse_a):
+    entry, ok = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
+    assert ok
+    entity = er.async_get(hass).async_get(entity_ids(hass, entry)[f"{SERIAL_A}_last_alive"])
+    assert entity.disabled_by is er.RegistryEntryDisabler.INTEGRATION
+    assert entity.entity_category is EntityCategory.DIAGNOSTIC
 
 
 async def test_unload_releases_the_socket(hass, evse_a):
@@ -221,7 +271,7 @@ async def test_session_recovers_from_a_broadcast(hass, evse_a):
 
     # the charger dropped our session and stopped sending headings
     evse_a.stop()
-    device._last_heading = None
+    device._last_alive = None
     assert not device.is_logged_in
 
     evse_a2 = await FakeEvse(SERIAL_A, ip="127.0.0.1", nickname="Garage").start()
@@ -297,28 +347,20 @@ async def test_wrong_password_is_reported_as_invalid_auth(hass, evse_a):
 
 
 async def test_essentials_are_refreshed_on_the_long_interval(hass, evse_a):
-    """Nickname and configured amps are re-read every 30 minutes, not only at login."""
+    """Nickname and configured amps are re-read every 30 minutes, even while pushes keep the poll asleep."""
     entry, ok = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
     assert ok
-    coordinator = entry.runtime_data
 
-    # a poll before the interval elapses must not re-request them
+    # the poll no longer carries them
     evse_a.received.clear()
-    await coordinator.async_refresh()
+    await entry.runtime_data.async_refresh()
     await settle(hass)
     assert CommandEnum.NICKNAME_REQUEST not in evse_a.received
 
-    coordinator._essentials_refreshed -= ESSENTIALS_INTERVAL + timedelta(seconds=1)
-    await coordinator.async_refresh()
+    async_fire_time_changed(hass, dt_util.utcnow() + ESSENTIALS_INTERVAL + timedelta(seconds=1))
     await settle(hass)
-
     assert CommandEnum.NICKNAME_REQUEST in evse_a.received
     assert CommandEnum.OUTPUT_AMPERAGE_REQUEST in evse_a.received
-    # and the timer resets, so it does not then fire on every poll
-    evse_a.received.clear()
-    await coordinator.async_refresh()
-    await settle(hass)
-    assert CommandEnum.NICKNAME_REQUEST not in evse_a.received
 
 
 async def test_debug_logging_reaches_the_library(hass):
@@ -331,7 +373,6 @@ async def test_a_user_rename_survives_a_nickname_change(hass, evse_a):
     """The registry follows the charger's nickname, but never overwrites a name the user set."""
     entry, ok = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
     assert ok
-    coordinator = entry.runtime_data
     registry = dr.async_get(hass)
     device = device_for(hass, entry)
     assert device.name == "BS20 Garage"
@@ -340,8 +381,7 @@ async def test_a_user_rename_survives_a_nickname_change(hass, evse_a):
     await hass.async_block_till_done()
 
     evse_a.nickname = "Driveway"
-    coordinator._essentials_refreshed -= ESSENTIALS_INTERVAL + timedelta(seconds=1)
-    await coordinator.async_refresh()
+    async_fire_time_changed(hass, dt_util.utcnow() + ESSENTIALS_INTERVAL + timedelta(seconds=1))
     await settle(hass)
 
     device = device_for(hass, entry)

@@ -48,6 +48,7 @@ async def async_setup_entry(
     entities.append(EVSEReservationDatetimeSensor(coordinator))
     entities.append(EVSEReservationDurationSensor(coordinator))
     entities.append(EVSETimeDeltaSensor(coordinator))
+    entities.append(EVSELastAliveSensor(coordinator))
     entities.append(EVSEL1VoltageSensor(coordinator))
     entities.append(EVSEL2VoltageSensor(coordinator))
     entities.append(EVSEL3VoltageSensor(coordinator))
@@ -231,6 +232,20 @@ class EVSETimeDeltaSensor(EVSEMasterEntity, SensorEntity):
     def native_value(self) -> int | None:
         device = self.coordinator.device
         return device.time_delta if device else None
+
+
+class EVSELastAliveSensor(EVSEMasterEntity, SensorEntity):
+    _attr_translation_key = "last_alive"
+    _unique_id_key = "last_alive"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    # changes with almost every packet; kept out of the recorder unless someone is debugging
+    _attr_entity_registry_enabled_default = False
+
+    @property
+    def native_value(self) -> datetime | None:
+        device = self.coordinator.device
+        return device.last_alive if device else None
 
 
 class _BasePhase(EVSEMasterEntity, SensorEntity):

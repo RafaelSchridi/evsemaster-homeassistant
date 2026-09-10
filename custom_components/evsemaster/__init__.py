@@ -7,7 +7,7 @@ import logging
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady, HomeAssistantError
+from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady, HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.service import async_extract_config_entry_ids
 from homeassistant.helpers.typing import ConfigType
@@ -39,12 +39,24 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Register services once; they are shared by every charger."""
 
     async def start_charge_service_call(service: ServiceCall) -> None:
-        coordinators = await _async_target_coordinators(hass, service)
-        for coordinator in coordinators:
-            await coordinator.async_start_charging(
-                service.data.get(SERVICE_DATA_MAX_AMPS),
-                service.data.get(SERVICE_DATA_START_DATETIME),
-                service.data.get(SERVICE_DATA_DURATION_HOURS),
+        # every targeted charger gets the command, even when an earlier one fails
+        failures: list[HomeAssistantError] = []
+        for coordinator in await _async_target_coordinators(hass, service):
+            try:
+                await coordinator.async_start_charging(
+                    service.data.get(SERVICE_DATA_MAX_AMPS),
+                    service.data.get(SERVICE_DATA_START_DATETIME),
+                    service.data.get(SERVICE_DATA_DURATION_HOURS),
+                )
+            except HomeAssistantError as err:
+                failures.append(err)
+        if len(failures) == 1:
+            raise failures[0]
+        if failures:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="start_failed",
+                translation_placeholders={"errors": "; ".join(str(err) for err in failures)},
             )
 
     hass.services.async_register(DOMAIN, SERVICE_ACTION_START_CHARGING, start_charge_service_call)
@@ -61,7 +73,7 @@ async def _async_target_coordinators(
         if entry and entry.domain == DOMAIN and entry.state is ConfigEntryState.LOADED:
             coordinators.append(entry.runtime_data)
     if not coordinators:
-        raise HomeAssistantError("No EVSEMaster charger matched the target of this action")
+        raise ServiceValidationError(translation_domain=DOMAIN, translation_key="no_matching_charger")
     return coordinators
 
 

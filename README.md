@@ -77,7 +77,7 @@ Start a charging session with optional parameters for delayed start and maximum 
 - **`max_amps`** (optional): Maximum charging amperage in Amperes (A). If not specified, the charger's configured max amps will be used. Values above the **configured** max are clamped to it; values above the device **hardware** limit raise an error.
 - **`start_datetime`** (optional): When to start charging. Format: ISO 8601 datetime string. If not specified, charging starts immediately. Needs to be within **24 hours** from now. If timezone is not specified, the local timezone will be assumed.
 - **`duration_hours`** (optional): Maximum charging duration in hours. Range: 1-24 hours. If not specified, charging will continue until manually stopped or the vehicle is fully charged.
-- **`target`**: The charger(s) to control. Targeting a device, entity, area and labels all work; the action runs on every EVSEMaster charger the target resolves to.
+- **`target`**: The charger(s) to control. Targeting a device, entity, area and labels all work; the action runs on every EVSEMaster charger the target resolves to. If some of them fail, the others still get the command, and the error names each charger that failed.
 
 **Example:**
 ```yaml
@@ -115,31 +115,35 @@ Internal charger temperature in Celsius (°C).
 Ambient/external temperature reading in Celsius (°C).
 - **Note:** On some devices like the Telestar and Besen this sensor is just the inner temperature again.
 
-#### **Total kWh** (`sensor.*_total_kwh`)
+#### **Total Energy** (`sensor.*_total_energy`)
 Total cumulative energy delivered by the charger since it was first installed. This is a persistent counter that only increases.
 
-#### **Session kWh** (`sensor.*_charge_kwh`)
+#### **Session Energy** (`sensor.*_session_energy`)
 Total cumulative energy delivered by the charger in the current charging session. This counter resets back to `0` when the next charging session starts.
 
-#### **Session Duration** (`sensor.*_charge_duration`)
+#### **Session Duration** (`sensor.*_session_duration`)
 Duration of the current charging session in seconds. This counter resets back to `0` when the next charging session starts.
 
-#### **Session Time** (`sensor.*_session_start_datetime`)
+#### **Session Start** (`sensor.*_session_start`)
 Date/time when the current or last charging session started.
 
-#### **Reservation Start** (`sensor.*_reservation_datetime`)
+#### **Session Max Current** (`sensor.*_session_max_current`)
+The current limit the charger confirmed for the current or last session, in Amperes (A). Use it to check that
+a `max_amps` passed to `start_charging` was applied.
+
+#### **Reservation Start** (`sensor.*_reservation_start`)
 The scheduled start time for a charging session if one is set via the `start_charging` service.
 
-#### **Reservation Duration** (`sensor.*_reservation_max_duration`)
+#### **Reservation Duration** (`sensor.*_reservation_duration`)
 The duration for a reserved charging session in minutes. set via the `start_charging` service.
 
 
 ### Binary Sensors
 
-#### **Plugged In** (`binary_sensor.*_plug_state`)
+#### **Plug State** (`binary_sensor.*_plug_state`)
 Indicates whether a connector is currently plugged into a vehicle.
 
-#### **Charging** (`binary_sensor.*_charging_state`)
+#### **Charging State** (`binary_sensor.*_charging_state`)
 Indicates whether the charger is actively charging.
 
 ---
@@ -147,20 +151,17 @@ Indicates whether the charger is actively charging.
 ### Buttons
 
 #### **Start Charging** (`button.*_start_charging`)
-Triggers a charging session immediately or with optional start delay and duration.
-- **Availability:** Only available when a vehicle is connected
-
+Triggers a charging session immediately
 #### **Stop Charging** (`button.*_stop_charging`)
-Stops the current charging session.
-- **Availability:** Only available when a vehicle is connected
-
-
+Stops the current charging session, or cancels a scheduled one. 
+With no car connected and nothing scheduled, pressing it reports that there is nothing to stop. 
 ## Configuration Entities
 These appear in the **Configuration** section of the device page.
 
 #### **Max Amps** (`number.*_max_amps`)
 Sets the maximum charging current for the charger. Range: 6 A to the device hardware limit.
-- **Warning:** Some devices (e.g. Besen B20) support changing this value during an active charging session, while others do not (e.g. Telestar EC311S6) and will return an error. If your device does not support dynamic current adjustment, only change this value when the charger is idle.
+- **Warning:** Some devices (e.g. Besen B20) apply a new value during an active charging session; others
+  (e.g. Telestar EC311S6) only apply it when a charge starts, so on those this entity is unavailable while charging.
 
 #### **Nickname** (`text.*_nickname`)
 Custom name for the charger device for easy identification. Also changes the name displayed on the charger itself.
@@ -171,8 +172,12 @@ Custom name for the charger device for easy identification. Also changes the nam
 
 These entities are disabled by default and appear in the **Diagnostic** section of the device page.
 
-##### **Device Clock Offset** (`sensor.*_time_delta`)
+##### **Device Clock Offset** (`sensor.*_device_clock_offset`)
 Clock skew between the charger's internal clock and local time in seconds. Some firmware versions have a bug where the device clock drifts by weeks; when a discrepancy of more than 24 hours is detected, this integration automatically compensates when scheduling sessions. `0` means no workaround is active.
+
+##### **Last Seen** (`sensor.*_last_seen`)
+When the charger last sent anything other than its periodic announcement. The integration treats the charger
+as connected while this is less than 120 seconds old. It updates with almost every packet, so enable it only while troubleshooting.
 
 ##### **L1/L2/L3 Voltage** (`sensor.*_l1_voltage`, `l2_voltage`, `l3_voltage`)
 Per-phase voltage in Volts (V).
