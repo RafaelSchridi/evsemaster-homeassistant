@@ -42,7 +42,7 @@ You need two things:
 
 
 ## Verified Compatible Devices
-- Telestar EC311S6
+- Telestar EC311S & EC311S6
 - [Besen B20](https://github.com/RafaelSchridi/evsemaster-homeassistant/issues/1)
 - [Morec MC20CAPP / MC20AAPP](https://github.com/RafaelSchridi/evsemaster-homeassistant/issues/9)
 
@@ -61,6 +61,8 @@ This Home Assistant integration is based on the excellent work by **[@johnwoo-nl
 - Chargers announce themselves, so extra ones are discovered automatically (see below).
 
 # Limitations
+
+- Doesn't do setup, you have to use the EVSEMaster app atleast once to set-up the WIFI.
 - Discovery only finds *additional* chargers: Home Assistant does not load this integration until one charger is set up, so the first one is always added by hand.
 - Your Home Assistant must be able to receive the chargers' broadcast packets on UDP port 28376.
   A separate VLAN, or Docker bridge networking without `network_mode: host`, blocks them; without those broadcasts discovery and automatic re-login do not work.
