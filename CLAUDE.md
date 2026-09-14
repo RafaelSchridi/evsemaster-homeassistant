@@ -9,7 +9,8 @@ HACS custom integration (domain `evsemaster`, `iot_class: local_push`) for EVSE 
 To run it, copy or symlink `custom_components/evsemaster/` into a Home Assistant instance.
 
 - Lint/format: `ruff check` / `ruff format` (config in `ruff.toml`, line-length 120)
-- Test: `pip install -r requirements_test.txt` then `pytest` from the repo root.
+- Test: `pip install -r requirements_test.txt $(jq -r '.requirements[]' custom_components/evsemaster/manifest.json)`
+  then `pytest` from the repo root. The library version lives only in `manifest.json`; don't pin it in `requirements_test.txt` too.
 - Tests drive the integration end to end against `evsemaster.testing.FakeEvse` chargers on
   loopback (each on its own `127.0.0.x`), covering setup, two chargers at once, service
   targeting, unload, discovery and the config flow.
