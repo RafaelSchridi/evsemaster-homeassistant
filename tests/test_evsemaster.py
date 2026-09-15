@@ -2,6 +2,7 @@
 
 import asyncio
 from datetime import timedelta
+from unittest.mock import patch
 
 import pytest
 from evsemaster import CommandEnum, CurrentStateEnum
@@ -303,6 +304,23 @@ async def test_session_recovers_from_a_broadcast(hass, evse_a):
         assert device.send_port == evse_a2.port, "did not follow the charger to its new port"
     finally:
         evse_a2.stop()
+
+
+async def test_announcements_do_not_postpone_the_watchdog(hass, evse_a):
+    """A charger that dropped us only announces itself; the poll must still run to wake it."""
+    entry, ok = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
+    assert ok
+    coordinator = entry.runtime_data
+
+    with (
+        patch.object(coordinator, "async_set_updated_data", wraps=coordinator.async_set_updated_data) as pushed,
+        patch.object(coordinator, "async_update_listeners", wraps=coordinator.async_update_listeners) as refreshed,
+    ):
+        evse_a.end_session()
+        await settle(hass, 2.0)
+
+    assert refreshed.called, "announcements no longer reach the entities"
+    assert not pushed.called, "an announcement restarted the watchdog countdown"
 
 
 async def test_unknown_charger_starts_a_discovery_flow(hass, evse_a):

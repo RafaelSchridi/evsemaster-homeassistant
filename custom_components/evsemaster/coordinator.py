@@ -121,7 +121,8 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
             elif event_type == EvseDeviceInfo.__name__ and isinstance(payload, EvseDeviceInfo):
                 self.data.device = payload
                 self._async_follow_device_name()
-                changed = True
+                # a charger that dropped us announces every 3s; restarting the watchdog on that starves it
+                self.async_update_listeners()
             if changed:
                 self.async_set_updated_data(self.data)
 
