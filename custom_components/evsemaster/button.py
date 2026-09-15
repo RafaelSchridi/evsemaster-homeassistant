@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from evsemaster import EvseStatus
+from evsemaster import CurrentStateEnum, EvseStatus
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from .const import DOMAIN
 from .coordinator import EVSEMasterDataUpdateCoordinator
 from .entity import EVSEMasterEntity
 
@@ -37,17 +39,15 @@ class EVSEStartChargingButton(EVSEMasterEntity, ButtonEntity):
         status: EvseStatus | None = self.entry.status
         return bool(status and status.current_state is not None)
 
-    async def async_press(
-        self,
-        max_amps: int | None = None,
-        duration_hours: float | None = None,
-        start_datetime: str | None = None,
-    ) -> None:
-        await self.coordinator.async_start_charging(
-            max_amps,
-            start_datetime,
-            duration_hours,
-        )
+    async def async_press(self) -> None:
+        status = self.entry.status
+        if status and status.current_state == CurrentStateEnum.NOT_CONNECTED:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="no_car_connected",
+                translation_placeholders={"device": self.coordinator.display_name},
+            )
+        await self.coordinator.async_start_charging()
 
 
 class EVSEStopChargingButton(EVSEMasterEntity, ButtonEntity):
@@ -61,4 +61,11 @@ class EVSEStopChargingButton(EVSEMasterEntity, ButtonEntity):
         return bool(status and status.current_state is not None)
 
     async def async_press(self) -> None:
+        status = self.entry.status
+        if status and status.current_state == CurrentStateEnum.NOT_CONNECTED:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="nothing_to_stop",
+                translation_placeholders={"device": self.coordinator.display_name},
+            )
         await self.coordinator.async_stop_charging()

@@ -149,6 +149,23 @@ async def test_stop_without_a_car_is_refused_not_hidden(hass):
         evse.stop()
 
 
+async def test_start_button_without_a_car_is_refused_not_hidden(hass):
+    evse = await FakeEvse(SERIAL_A, ip="127.0.0.1", state=CurrentStateEnum.NOT_CONNECTED).start()
+    try:
+        entry, ok = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
+        assert ok
+        button = entity_ids(hass, entry)[f"{SERIAL_A}_start_charging_button"]
+        assert hass.states.get(button).state != STATE_UNAVAILABLE
+
+        with pytest.raises(ServiceValidationError) as err:
+            await hass.services.async_call("button", "press", {"entity_id": button}, blocking=True)
+        assert err.value.translation_key == "no_car_connected"
+        assert err.value.translation_placeholders == {"device": "BS20"}
+        assert CommandEnum.CHARGE_START_REQUEST not in evse.received
+    finally:
+        evse.stop()
+
+
 async def test_single_phase_charger_reports_status(hass, evse_b):
     entry, ok = await add_entry(hass, "127.0.0.2", unique_id=SERIAL_B)
     assert ok

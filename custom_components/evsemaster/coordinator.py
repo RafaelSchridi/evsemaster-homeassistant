@@ -10,7 +10,6 @@ from typing import Any
 
 from evsemaster import (
     ChargingStatus,
-    CurrentStateEnum,
     EvseDevice,
     EvseDeviceInfo,
     EvseStatus,
@@ -249,12 +248,7 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
             return await self.device.start_charging(max_amps, start_datetime, minutes)
 
     async def async_stop_charging(self) -> bool:
-        with self._action_errors("stop_failed") as placeholders:
-            status = self.data.status
-            if status and status.current_state == CurrentStateEnum.NOT_CONNECTED:
-                raise ServiceValidationError(
-                    translation_domain=DOMAIN, translation_key="nothing_to_stop", translation_placeholders=placeholders
-                )
+        with self._action_errors("stop_failed"):
             return await self.device.stop_charging()
 
     async def async_set_nickname(self, nickname: str) -> bool:

@@ -144,6 +144,9 @@
     "nothing_to_stop": {
       "message": "{device}: no car is connected and no charge is scheduled, so there is nothing to stop."
     },
+    "no_car_connected": {
+      "message": "{device}: no car is connected, so charging cannot start. Use the start_charging action to schedule a reservation."
+    },
     "unsupported_operation": {
       "message": "{device}: {error}"
     },

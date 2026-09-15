@@ -67,3 +67,6 @@ Two of its rules bite easily: `manifest.json` keys must be sorted (`domain`, `na
 - Stop charging: the button stays available with no car connected; pressing it in `NOT_CONNECTED`
   raises `ServiceValidationError` (`nothing_to_stop`) instead. Availability means "charger reachable",
   not "action meaningful": HA skips unavailable entities in service calls without an error.
+- Start charging: same rule for the button, which raises `no_car_connected` in `NOT_CONNECTED`. The
+  `start_charging` action is not guarded, because a reservation without a car plugged in is valid.
+  Both guards live in `button.py`, not the coordinator, since they only apply to the buttons.
