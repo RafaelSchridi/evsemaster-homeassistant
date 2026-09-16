@@ -4,6 +4,13 @@ This Home Assistant integration provides comprehensive control and monitoring of
 
 The underlying implementation is factored out to a separate Python package: https://github.com/RafaelSchridi/evsemaster
 
+## Verified Compatible Devices
+- Telestar EC311S & EC311S6
+- [Besen B20](https://github.com/RafaelSchridi/evsemaster-homeassistant/issues/1)
+- [Morec MC20CAPP / MC20AAPP](https://github.com/RafaelSchridi/evsemaster-homeassistant/issues/9)
+
+Charger working and not on this list? [Report it here to help others!](https://github.com/RafaelSchridi/evsemaster-homeassistant/issues/new?template=working-device.yml)
+
 ## LAN Only
 If you only need basic control and are within bluetooth range, consider using the [bluetooth integration in home assistant](https://www.home-assistant.io/integrations/besen). This integration is for LAN control only.
 
@@ -35,18 +42,6 @@ If you do not have HACS yet, [follow the official guide](https://hacs.xyz/docs/u
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=evsemaster)
 
 Or: **Settings** → **Devices & Services** → **Add Integration** → search for **EVSEMaster**.
-
-You need two things:
-- **Host IP address** of the charger (its IP on your local network — check your router's DHCP client list; give it a static lease while you are there).
-- **EVSE password**: the 6-digit password from the EVSEMaster app. Default on most devices is `123456`.
-
-
-## Verified Compatible Devices
-- Telestar EC311S & EC311S6
-- [Besen B20](https://github.com/RafaelSchridi/evsemaster-homeassistant/issues/1)
-- [Morec MC20CAPP / MC20AAPP](https://github.com/RafaelSchridi/evsemaster-homeassistant/issues/9)
-
-Charger working and not on this list? [Report it here to help others!](https://github.com/RafaelSchridi/evsemaster-homeassistant/issues/new?template=working-device.yml)
 
 ## Credits
 

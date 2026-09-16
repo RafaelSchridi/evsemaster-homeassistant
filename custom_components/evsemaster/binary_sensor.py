@@ -36,11 +36,13 @@ class EVSEPluggedInBinarySensor(EVSEMasterEntity, BinarySensorEntity):
     _attr_device_class = BinarySensorDeviceClass.PLUG
 
     @property
-    def is_on(self) -> bool:
+    def is_on(self) -> bool | None:
         status: EvseStatus | None = self.entry.status
-        if status:
-            return status.plug_state != PlugStateEnum.DISCONNECTED
-        return False
+        if not status:
+            return False
+        if status.plug_state is PlugStateEnum.UNKNOWN:
+            return None
+        return status.plug_state != PlugStateEnum.DISCONNECTED
 
 
 class EVSEChargingBinarySensor(EVSEMasterEntity, BinarySensorEntity):
@@ -49,8 +51,10 @@ class EVSEChargingBinarySensor(EVSEMasterEntity, BinarySensorEntity):
     _attr_device_class = BinarySensorDeviceClass.BATTERY_CHARGING
 
     @property
-    def is_on(self) -> bool:
+    def is_on(self) -> bool | None:
         status: EvseStatus | None = self.entry.status
-        if status:
-            return status.current_state == CurrentStateEnum.CHARGING
-        return False
+        if not status:
+            return False
+        if status.current_state is CurrentStateEnum.UNKNOWN:
+            return None
+        return status.current_state == CurrentStateEnum.CHARGING

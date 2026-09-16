@@ -255,7 +255,7 @@ class _BasePhase(EVSEMasterEntity, SensorEntity):
 
     @property
     def available(self) -> bool:
-        return self.entry.status is not None
+        return super().available and self.entry.status is not None
 
 
 class EVSEL1VoltageSensor(_BasePhase):

@@ -72,3 +72,9 @@ Two of its rules bite easily: `manifest.json` keys must be sorted (`domain`, `na
 - Start charging: same rule for the button, which raises `no_car_connected` in `NOT_CONNECTED`. The
   `start_charging` action is not guarded, because a reservation without a car plugged in is valid.
   Both guards live in `button.py`, not the coordinator, since they only apply to the buttons.
+- Every entity that overrides `available` must start from `super().available` (the coordinator's
+  `last_update_success`), or it stays available on a charger that stopped answering — which is worse
+  than useless for Stop, since HA skips unavailable entities in service calls silently.
+- Unmapped firmware states arrive as `PlugStateEnum.UNKNOWN` / `CurrentStateEnum.UNKNOWN` (library
+  2.0.2+). The state sensors emit `"unknown"` by themselves; the binary sensors must return `None`
+  rather than guess, and the buttons must not key availability on a state being recognised.

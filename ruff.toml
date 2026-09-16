@@ -6,7 +6,8 @@ target-version = "py314"
 select = ["E", "F", "W", "I", "UP", "B", "SIM"]
 ignore = [
     "B008",  # HA passes callables as defaults all over the place
-    "SIM103",  # guard clauses read better than one compound negated boolean
+    "SIM103",
+    "SIM108",
 ]
 
 [lint.isort]

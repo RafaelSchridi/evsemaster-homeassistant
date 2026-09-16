@@ -55,7 +55,7 @@ class EVSEMaxAmpsNumber(EVSEMasterEntity, NumberEntity):
     @property
     def available(self) -> bool:
         """Unavailable mid-charge on a model that only applies the amperage at session start."""
-        if not self.entry.status:
+        if not super().available or not self.entry.status:
             return False
         device = self.coordinator.device
         if not device:

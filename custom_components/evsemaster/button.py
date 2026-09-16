@@ -37,7 +37,7 @@ class EVSEStartChargingButton(EVSEMasterEntity, ButtonEntity):
     @property
     def available(self) -> bool:
         status: EvseStatus | None = self.entry.status
-        return bool(status and status.current_state is not None)
+        return super().available and bool(status and status.current_state is not None)
 
     async def async_press(self) -> None:
         status = self.entry.status
@@ -58,7 +58,7 @@ class EVSEStopChargingButton(EVSEMasterEntity, ButtonEntity):
     @property
     def available(self) -> bool:
         status: EvseStatus | None = self.entry.status
-        return bool(status and status.current_state is not None)
+        return super().available and bool(status and status.current_state is not None)
 
     async def async_press(self) -> None:
         status = self.entry.status

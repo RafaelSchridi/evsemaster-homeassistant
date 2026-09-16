@@ -9,7 +9,7 @@ from evsemaster import CommandEnum, CurrentStateEnum
 from evsemaster.testing import FakeEvse
 from homeassistant.components.logger.helpers import get_integration_loggers
 from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY, ConfigEntryState
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, STATE_UNAVAILABLE, EntityCategory
+from homeassistant.const import CONF_HOST, CONF_PASSWORD, STATE_UNAVAILABLE, STATE_UNKNOWN, EntityCategory
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
@@ -163,6 +163,41 @@ async def test_start_button_without_a_car_is_refused_not_hidden(hass):
         assert err.value.translation_key == "no_car_connected"
         assert err.value.translation_placeholders == {"device": "BS20"}
         assert CommandEnum.CHARGE_START_REQUEST not in evse.received
+    finally:
+        evse.stop()
+
+
+async def test_controls_go_unavailable_with_the_charger(hass, evse_a):
+    """Entities that override availability must still follow a failed poll, not just a status ever seen."""
+    entry, ok = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
+    assert ok
+    ids = entity_ids(hass, entry)
+    watched = [
+        ids[f"{SERIAL_A}_{key}"]
+        for key in ("start_charging_button", "stop_charging_button", "configured_max_amps", "current_state")
+    ]
+    assert all(hass.states.get(e).state != STATE_UNAVAILABLE for e in watched)
+
+    coordinator = entry.runtime_data
+    coordinator.device._authenticated = False
+    with patch.object(coordinator.device, "login", return_value=False):
+        await coordinator.async_refresh()
+    await hass.async_block_till_done()
+
+    assert [e for e in watched if hass.states.get(e).state != STATE_UNAVAILABLE] == []
+
+
+async def test_unmapped_states_read_as_unknown_without_hiding_stop(hass):
+    """Firmware states we cannot map must not be guessed at, and must not disarm the stop button."""
+    evse = await FakeEvse(SERIAL_A, ip="127.0.0.1", state=200, plug=16).start()
+    try:
+        entry, ok = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
+        assert ok
+        ids = entity_ids(hass, entry)
+
+        for key in ("current_state", "plug_state", "plug_state_binary", "charging_binary"):
+            assert hass.states.get(ids[f"{SERIAL_A}_{key}"]).state == STATE_UNKNOWN, key
+        assert hass.states.get(ids[f"{SERIAL_A}_stop_charging_button"]).state != STATE_UNAVAILABLE
     finally:
         evse.stop()
 
