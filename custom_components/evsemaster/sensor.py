@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from evsemaster import EvseStatus, PlugStateEnum
+from evsemaster import CurrentStateEnum, EvseStatus, PlugStateEnum
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -59,15 +59,22 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
+# Only show reservation details in these states
+RESERVATION_STATES = (CurrentStateEnum.CHARGING_RESERVATION, CurrentStateEnum.CHARGING)
+
+
 class EVSEStateSensor(EVSEMasterEntity, SensorEntity):
     _attr_translation_key = "current_state"
     _unique_id_key = "current_state"
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = [state.name.lower() for state in CurrentStateEnum]
 
     @property
     def native_value(self) -> str | None:
         status: EvseStatus = self.entry.status
-        if status:
-            return status.current_state.name.lower()
+        if not status:
+            return None
+        return status.current_state.name.lower()
 
 
 class EVSECurrentPowerSensor(EVSEMasterEntity, SensorEntity):
@@ -87,13 +94,15 @@ class EVSECurrentPowerSensor(EVSEMasterEntity, SensorEntity):
 class EVSEPlugStateSensor(EVSEMasterEntity, SensorEntity):
     _attr_translation_key = "plug_state"
     _unique_id_key = "plug_state"
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = [state.name.lower() for state in PlugStateEnum]
 
     @property
     def native_value(self) -> str | None:
         status: EvseStatus = self.entry.status
-        if status and status.plug_state is not None:
-            return PlugStateEnum(status.plug_state).name.lower()
-        return None
+        if not status:
+            return None
+        return status.plug_state.name.lower()
 
 
 class EVSEInnerTemperatureSensor(EVSEMasterEntity, SensorEntity):
@@ -201,7 +210,9 @@ class EVSEReservationDatetimeSensor(EVSEMasterEntity, SensorEntity):
     @property
     def native_value(self) -> datetime | None:
         cstatus = self.entry.charging_status
-        if cstatus and isinstance(cstatus.reservation_datetime, datetime):
+        if not cstatus or cstatus.current_state not in RESERVATION_STATES:
+            return None
+        if isinstance(cstatus.reservation_datetime, datetime):
             return cstatus.reservation_datetime
         return None
 
@@ -215,9 +226,9 @@ class EVSEReservationDurationSensor(EVSEMasterEntity, SensorEntity):
     @property
     def native_value(self) -> int | None:
         cstatus = self.entry.charging_status
-        if cstatus and cstatus.max_duration_minutes is not None:
-            return cstatus.max_duration_minutes
-        return None
+        if not cstatus or cstatus.current_state not in RESERVATION_STATES:
+            return None
+        return cstatus.max_duration_minutes
 
 
 class EVSETimeDeltaSensor(EVSEMasterEntity, SensorEntity):

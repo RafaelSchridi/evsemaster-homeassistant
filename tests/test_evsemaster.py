@@ -202,6 +202,35 @@ async def test_unmapped_states_read_as_unknown_without_hiding_stop(hass):
         evse.stop()
 
 
+async def test_a_cancelled_reservation_stops_being_reported(hass, evse_a):
+    """A Telestar keeps reporting a cancelled reservation forever; the values below are from its logs."""
+    entry, ok = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
+    assert ok
+    coordinator = entry.runtime_data
+    ids = entity_ids(hass, entry)
+    start = ids[f"{SERIAL_A}_reservation_datetime"]
+    duration = ids[f"{SERIAL_A}_reservation_max_duration"]
+
+    pending = coordinator.data.charging_status.model_copy(
+        update={
+            "current_state": CurrentStateEnum.CHARGING_RESERVATION,
+            "reservation_datetime": dt_util.parse_datetime("2026-09-17T09:30:00+02:00"),
+            "max_duration_minutes": 480,
+        }
+    )
+    coordinator._on_protocol_event("ChargingStatus", pending)
+    await hass.async_block_till_done()
+    assert hass.states.get(duration).state == "480"
+    assert hass.states.get(start).state != STATE_UNKNOWN
+
+    # stop pressed: the charger reports the same reservation with the car still plugged in
+    cancelled = pending.model_copy(update={"current_state": CurrentStateEnum.READY_TO_CHARGE})
+    coordinator._on_protocol_event("ChargingStatus", cancelled)
+    await hass.async_block_till_done()
+    assert hass.states.get(duration).state == STATE_UNKNOWN, "a cancelled reservation kept its duration"
+    assert hass.states.get(start).state == STATE_UNKNOWN, "a cancelled reservation kept its start time"
+
+
 async def test_single_phase_charger_reports_status(hass, evse_b):
     entry, ok = await add_entry(hass, "127.0.0.2", unique_id=SERIAL_B)
     assert ok
