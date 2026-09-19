@@ -351,9 +351,12 @@ async def test_session_recovers_from_a_broadcast(hass, evse_a):
     entry, _ = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
     device = entry.runtime_data.device
 
-    # the charger dropped our session and stopped sending headings
+    # the charger dropped our registration and stopped heading us
     evse_a.stop()
+    # both, so this holds against the pinned library and the unreleased one alike
     device._last_alive = None
+    device._last_heading = None
+    device._last_login_attempt = None  # as if the login cooldown had elapsed
     await asyncio.sleep(0.5)
     assert not device.is_logged_in
 

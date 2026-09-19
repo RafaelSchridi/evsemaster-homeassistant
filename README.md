@@ -1,6 +1,6 @@
 # EVSEMaster Home Assistant Integration
 
-This Home Assistant integration provides comprehensive control and monitoring of EVSE chargers that are compatible with the EVSEMaster app. While all testing was done on Telestar device, it should work with all devices that use the app like the one from Besen, Telestar, evseODM, Morec, Deltacom, etc.
+This Unofficial Home Assistant integration provides comprehensive control and monitoring of EVSE chargers that are compatible with the EVSEMaster app. While all testing was done on Telestar device, it should work with all devices that use the app like the one from Besen, Telestar, evseODM, Morec, Deltacom, etc.
 
 The underlying implementation is factored out to a separate Python package: https://github.com/RafaelSchridi/evsemaster
 
