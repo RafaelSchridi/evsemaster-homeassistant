@@ -1,6 +1,4 @@
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+# AGENTS.md
 
 ## Overview
 
@@ -78,6 +76,6 @@ Two of its rules bite easily: `manifest.json` keys must be sorted (`domain`, `na
 - Unmapped firmware states arrive as `PlugStateEnum.UNKNOWN` / `CurrentStateEnum.UNKNOWN` (library
   2.0.2+). Both state sensors are `device_class: enum` and list every member, `unknown` included, so
   the enum stays the single source of truth with no "except this one" rule to keep in sync. hassfest
-  accepts an option with no `state` translation, and `unknown` deliberately has none: HA supplies that label itself and localises it
+  accepts an option with no `state` translation, and `unknown` deliberately has none: HA supplies that label itself, localises it, and
   treats that state string as "no value". The binary sensors must return `None` rather than guess, and
   the buttons must not key availability on a state being recognised.
