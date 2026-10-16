@@ -25,3 +25,12 @@ class EVSEMasterEntity(CoordinatorEntity[EVSEMasterDataUpdateCoordinator]):
     @property
     def entry(self) -> DataSchema:
         return self.coordinator.data
+
+
+class EVSEMasterLiveEntity(EVSEMasterEntity):
+    """Reports what the charger pushes, so it is only current while the charger is still reporting."""
+
+    @property
+    def available(self) -> bool:
+        device = self.coordinator.device
+        return super().available and device is not None and device.is_receiving

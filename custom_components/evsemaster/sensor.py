@@ -24,7 +24,7 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .coordinator import EVSEMasterDataUpdateCoordinator
-from .entity import EVSEMasterEntity
+from .entity import EVSEMasterEntity, EVSEMasterLiveEntity
 
 
 async def async_setup_entry(
@@ -63,7 +63,7 @@ async def async_setup_entry(
 RESERVATION_STATES = (CurrentStateEnum.CHARGING_RESERVATION, CurrentStateEnum.CHARGING)
 
 
-class EVSEStateSensor(EVSEMasterEntity, SensorEntity):
+class EVSEStateSensor(EVSEMasterLiveEntity, SensorEntity):
     _attr_translation_key = "current_state"
     _unique_id_key = "current_state"
     _attr_device_class = SensorDeviceClass.ENUM
@@ -77,7 +77,7 @@ class EVSEStateSensor(EVSEMasterEntity, SensorEntity):
         return status.current_state.name.lower()
 
 
-class EVSECurrentPowerSensor(EVSEMasterEntity, SensorEntity):
+class EVSECurrentPowerSensor(EVSEMasterLiveEntity, SensorEntity):
     _attr_translation_key = "current_power"
     _unique_id_key = "current_power"
     _attr_native_unit_of_measurement = UnitOfPower.WATT
@@ -91,7 +91,7 @@ class EVSECurrentPowerSensor(EVSEMasterEntity, SensorEntity):
             return status.current_power
 
 
-class EVSEPlugStateSensor(EVSEMasterEntity, SensorEntity):
+class EVSEPlugStateSensor(EVSEMasterLiveEntity, SensorEntity):
     _attr_translation_key = "plug_state"
     _unique_id_key = "plug_state"
     _attr_device_class = SensorDeviceClass.ENUM
@@ -105,7 +105,7 @@ class EVSEPlugStateSensor(EVSEMasterEntity, SensorEntity):
         return status.plug_state.name.lower()
 
 
-class EVSEInnerTemperatureSensor(EVSEMasterEntity, SensorEntity):
+class EVSEInnerTemperatureSensor(EVSEMasterLiveEntity, SensorEntity):
     _attr_translation_key = "inner_temperature"
     _unique_id_key = "inner_temperature"
     _attr_device_class = SensorDeviceClass.TEMPERATURE
@@ -119,7 +119,7 @@ class EVSEInnerTemperatureSensor(EVSEMasterEntity, SensorEntity):
             return status.inner_temperature
 
 
-class EVSEOuterTemperatureSensor(EVSEMasterEntity, SensorEntity):
+class EVSEOuterTemperatureSensor(EVSEMasterLiveEntity, SensorEntity):
     _attr_translation_key = "outer_temperature"
     _unique_id_key = "outer_temperature"
     _attr_device_class = SensorDeviceClass.TEMPERATURE
@@ -147,7 +147,7 @@ class EVSETotalKwhSensor(EVSEMasterEntity, SensorEntity):
             return status.total_kwh
 
 
-class EVSEChargeKwhSensor(EVSEMasterEntity, SensorEntity):
+class EVSEChargeKwhSensor(EVSEMasterLiveEntity, SensorEntity):
     _attr_translation_key = "charge_kwh"
     _unique_id_key = "charge_kwh"
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
@@ -161,7 +161,7 @@ class EVSEChargeKwhSensor(EVSEMasterEntity, SensorEntity):
             return cstatus.charge_kwh
 
 
-class EVSEChargeDurationSensor(EVSEMasterEntity, SensorEntity):
+class EVSEChargeDurationSensor(EVSEMasterLiveEntity, SensorEntity):
     _attr_translation_key = "charge_duration"
     _unique_id_key = "charge_duration"
     _attr_device_class = SensorDeviceClass.DURATION
@@ -175,7 +175,7 @@ class EVSEChargeDurationSensor(EVSEMasterEntity, SensorEntity):
             return cstatus.duration_seconds
 
 
-class EVSESessionStartDatetimeSensor(EVSEMasterEntity, SensorEntity):
+class EVSESessionStartDatetimeSensor(EVSEMasterLiveEntity, SensorEntity):
     _attr_translation_key = "session_start_datetime"
     _unique_id_key = "session_start_datetime"
     _attr_device_class = SensorDeviceClass.TIMESTAMP
@@ -188,7 +188,7 @@ class EVSESessionStartDatetimeSensor(EVSEMasterEntity, SensorEntity):
         return None
 
 
-class EVSESessionMaxCurrentSensor(EVSEMasterEntity, SensorEntity):
+class EVSESessionMaxCurrentSensor(EVSEMasterLiveEntity, SensorEntity):
     _attr_translation_key = "session_max_current"
     _unique_id_key = "session_max_current"
     _attr_native_unit_of_measurement = UnitOfElectricCurrent.AMPERE
@@ -202,7 +202,7 @@ class EVSESessionMaxCurrentSensor(EVSEMasterEntity, SensorEntity):
         return None
 
 
-class EVSEReservationDatetimeSensor(EVSEMasterEntity, SensorEntity):
+class EVSEReservationDatetimeSensor(EVSEMasterLiveEntity, SensorEntity):
     _attr_translation_key = "reservation_datetime"
     _unique_id_key = "reservation_datetime"
     _attr_device_class = SensorDeviceClass.TIMESTAMP
@@ -217,7 +217,7 @@ class EVSEReservationDatetimeSensor(EVSEMasterEntity, SensorEntity):
         return None
 
 
-class EVSEReservationDurationSensor(EVSEMasterEntity, SensorEntity):
+class EVSEReservationDurationSensor(EVSEMasterLiveEntity, SensorEntity):
     _attr_translation_key = "reservation_duration"
     _unique_id_key = "reservation_max_duration"
     _attr_device_class = SensorDeviceClass.DURATION
@@ -259,7 +259,7 @@ class EVSELastAliveSensor(EVSEMasterEntity, SensorEntity):
         return device.last_alive if device else None
 
 
-class _BasePhase(EVSEMasterEntity, SensorEntity):
+class _BasePhase(EVSEMasterLiveEntity, SensorEntity):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_entity_registry_enabled_default = False
     _attr_state_class = SensorStateClass.MEASUREMENT

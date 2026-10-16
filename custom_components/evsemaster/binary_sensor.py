@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .coordinator import EVSEMasterDataUpdateCoordinator
-from .entity import EVSEMasterEntity
+from .entity import EVSEMasterLiveEntity
 
 
 async def async_setup_entry(
@@ -30,7 +30,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class EVSEPluggedInBinarySensor(EVSEMasterEntity, BinarySensorEntity):
+class EVSEPluggedInBinarySensor(EVSEMasterLiveEntity, BinarySensorEntity):
     _attr_translation_key = "plug_state"
     _unique_id_key = "plug_state_binary"
     _attr_device_class = BinarySensorDeviceClass.PLUG
@@ -45,7 +45,7 @@ class EVSEPluggedInBinarySensor(EVSEMasterEntity, BinarySensorEntity):
         return status.plug_state != PlugStateEnum.DISCONNECTED
 
 
-class EVSEChargingBinarySensor(EVSEMasterEntity, BinarySensorEntity):
+class EVSEChargingBinarySensor(EVSEMasterLiveEntity, BinarySensorEntity):
     _attr_translation_key = "charging_state"
     _unique_id_key = "charging_binary"
     _attr_device_class = BinarySensorDeviceClass.BATTERY_CHARGING

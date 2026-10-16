@@ -5,7 +5,8 @@ from datetime import timedelta
 from unittest.mock import patch
 
 import pytest
-from evsemaster import CommandEnum, CurrentStateEnum
+from evsemaster import CommandEnum, CurrentStateEnum, now_aware
+from evsemaster.device import HEADING_TIMEOUT
 from evsemaster.testing import FakeEvse
 from homeassistant.components.logger.helpers import get_integration_loggers
 from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY, ConfigEntryState
@@ -185,6 +186,25 @@ async def test_controls_go_unavailable_with_the_charger(hass, evse_a):
     await hass.async_block_till_done()
 
     assert [e for e in watched if hass.states.get(e).state != STATE_UNAVAILABLE] == []
+
+
+async def test_live_sensors_go_stale_when_the_charger_stops_reporting(hass, evse_a):
+    """A charger that stopped heading still takes commands, so controls stay, but its last snapshot is not current."""
+    entry, ok = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
+    assert ok
+    ids = entity_ids(hass, entry)
+    coordinator = entry.runtime_data
+
+    evse_a.end_session()
+    coordinator.device._last_heading = now_aware() - HEADING_TIMEOUT
+    coordinator.async_update_listeners()
+    await hass.async_block_till_done()
+
+    for key in ("current_power", "current_state", "plug_state_binary", "charging_binary"):
+        assert hass.states.get(ids[f"{SERIAL_A}_{key}"]).state == STATE_UNAVAILABLE, key
+    for key in ("stop_charging_button", "start_charging_button", "configured_max_amps", "nickname"):
+        assert hass.states.get(ids[f"{SERIAL_A}_{key}"]).state != STATE_UNAVAILABLE, key
+    assert hass.states.get(ids[f"{SERIAL_A}_total_kwh"]).state == "1234.56"
 
 
 async def test_unmapped_states_read_as_unknown_without_hiding_stop(hass):

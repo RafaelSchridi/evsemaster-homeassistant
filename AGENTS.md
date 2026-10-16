@@ -73,6 +73,11 @@ Two of its rules bite easily: `manifest.json` keys must be sorted (`domain`, `na
 - Every entity that overrides `available` must start from `super().available` (the coordinator's
   `last_update_success`), or it stays available on a charger that stopped answering — which is worse
   than useless for Stop, since HA skips unavailable entities in service calls silently.
+- Sensors and binary sensors that show pushed data derive from `EVSEMasterLiveEntity`, which is also
+  unavailable while `device.is_receiving` is false. A charger that stopped reporting still answers the
+  watchdog's login, so the coordinator stays successful and only the snapshot is stale. Controls, the
+  energy total (a meter reading does not go stale like a live one) and the session diagnostics
+  (`time_delta`, `last_alive`) stay on `EVSEMasterEntity`.
 - Unmapped firmware states arrive as `PlugStateEnum.UNKNOWN` / `CurrentStateEnum.UNKNOWN` (library
   2.0.2+). Both state sensors are `device_class: enum` and list every member, `unknown` included, so
   the enum stays the single source of truth with no "except this one" rule to keep in sync. hassfest
