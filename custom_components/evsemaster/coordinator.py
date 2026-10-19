@@ -5,16 +5,20 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, time, timedelta
 from typing import Any
 
 from evsemaster import (
+    ChargeRecord,
     ChargingStatus,
     EvseDevice,
     EvseDeviceInfo,
     EvseStatus,
+    LanguageEnum,
     NotLoggedInError,
     UnsupportedOperationError,
+    WeeklyPlan,
+    WeeklyPlanSlot,
     now_aware,
 )
 from evsemaster.data_types import BaseSchema
@@ -24,7 +28,9 @@ from homeassistant.core import CALLBACK_TYPE, HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from pydantic import ValidationError
 
 from .const import DOMAIN
 from .hub import async_get_listener
@@ -34,12 +40,19 @@ _LOGGER = logging.getLogger(__name__)
 ESSENTIALS_INTERVAL = timedelta(minutes=30)
 
 
+def record_store(hass: HomeAssistant, entry: ConfigEntry) -> Store:
+    """Where the last finished session is kept across restarts."""
+    return Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.last_record")
+
+
 class DataSchema(BaseSchema):
     """Schema for EVSE data."""
 
     status: EvseStatus | None = None
     charging_status: ChargingStatus | None = None
     device: EvseDeviceInfo = EvseDeviceInfo()
+    weekly_plan: WeeklyPlan | None = None
+    last_record: ChargeRecord | None = None
 
 
 class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
@@ -59,9 +72,16 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
         self.data: DataSchema = DataSchema()
         self.device: EvseDevice | None = None
         self._unsub_essentials: CALLBACK_TYPE | None = None
+        self._store = record_store(hass, entry)
 
     async def async_init(self) -> None:
         """Register this charger with the shared listener (cannot await in __init__)."""
+        saved = await self._store.async_load()
+        if saved:
+            try:
+                self.data.last_record = ChargeRecord.model_validate(saved)
+            except ValidationError:
+                _LOGGER.debug("Dropping a stored session this library version cannot read")
         listener = await async_get_listener(self.hass)
         self.device = await listener.async_add_device(self.host, self.password, on_event=self._on_protocol_event)
         self._unsub_essentials = async_track_time_interval(
@@ -97,7 +117,8 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
             "manufacturer": device.brand,
             "model": device.model,
             "serial_number": self.unique_id,
-            "hw_version": device.hardware_version,
+            "sw_version": device.firmware_version,
+            "hw_version": None,  # the registry keeps an old value until it is overwritten
         }
 
     def _ensure_serial(self) -> None:
@@ -123,6 +144,13 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
                 self._async_follow_device_name()
                 # a charger that dropped us announces every 3s; restarting the watchdog on that starves it
                 self.async_update_listeners()
+            elif event_type == WeeklyPlan.__name__ and isinstance(payload, WeeklyPlan):
+                self.data.weekly_plan = payload
+                self.async_update_listeners()
+            elif event_type == ChargeRecord.__name__ and isinstance(payload, ChargeRecord):
+                self.data.last_record = payload
+                self.async_update_listeners()
+                await self._store.async_save(payload.model_dump(mode="json"))
             if changed:
                 self.async_set_updated_data(self.data)
 
@@ -190,7 +218,7 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
         placeholders = {"device": self.display_name}
         try:
             yield placeholders
-        except NotLoggedInError as err:
+        except (NotLoggedInError, TimeoutError) as err:
             raise HomeAssistantError(
                 translation_domain=DOMAIN, translation_key=unreachable_key, translation_placeholders=placeholders
             ) from err
@@ -261,3 +289,33 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
         """Set maximum output amperage."""
         with self._action_errors():
             return await self.device.set_output_amperage(amperage)
+
+    async def async_set_language(self, language: LanguageEnum) -> bool:
+        """Set the language of the charger's display."""
+        with self._action_errors():
+            return await self.device.set_language(language)
+
+    async def async_set_weekly_plan(self, days: list[int], start: time, end: time) -> bool:
+        """Charge from start to end on the given weekdays (0 = Monday), as the app does; no days turns it off."""
+        # the app's arithmetic: an end before the start runs into the next day, an equal one is 24 h
+        duration = (end.hour * 60 + end.minute - start.hour * 60 - start.minute) % 1440 or 1440
+        on = WeeklyPlanSlot(enabled=True, start=start, duration_minutes=duration)
+        plan = WeeklyPlan(slots=[on if day in days else WeeklyPlanSlot() for day in range(7)])
+        with self._action_errors():
+            return await self.device.set_weekly_plan(plan)
+
+    async def async_read_history(self, limit: int | None = None) -> list[dict[str, Any]]:
+        """The charger's stored sessions, newest first."""
+        with self._action_errors():
+            history = await self.device.read_history()
+        oldest = datetime.min.replace(tzinfo=UTC)
+        records = sorted(history.items(), key=lambda item: item[1].start_datetime or oldest, reverse=True)
+        return [
+            {
+                "slot": slot,
+                **record.model_dump(mode="json"),
+                "start_type": record.start_type.name.lower(),
+                "stop_reason": record.stop_reason.name.lower(),
+            }
+            for slot, record in records[:limit]
+        ]

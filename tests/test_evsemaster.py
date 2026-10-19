@@ -2,12 +2,12 @@
 
 import asyncio
 from datetime import timedelta
-from unittest.mock import patch
+from unittest.mock import PropertyMock, patch
 
 import pytest
 from evsemaster import CommandEnum, CurrentStateEnum, now_aware
 from evsemaster.device import HEADING_TIMEOUT
-from evsemaster.testing import FakeEvse
+from evsemaster.testing import FakeEvse, charge_record_payload
 from homeassistant.components.logger.helpers import get_integration_loggers
 from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY, ConfigEntryState
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, STATE_UNAVAILABLE, STATE_UNKNOWN, EntityCategory
@@ -18,7 +18,7 @@ from homeassistant.loader import async_get_integration
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
-from custom_components.evsemaster.const import DOMAIN
+from custom_components.evsemaster.const import DOMAIN, WEEKDAYS
 from custom_components.evsemaster.coordinator import ESSENTIALS_INTERVAL
 
 SERIAL_A = "aa" * 8
@@ -44,6 +44,17 @@ async def until(hass, predicate, seconds=5.0):
         if predicate():
             return True
     return False
+
+
+@pytest.fixture
+def entity_registry_enabled_by_default():
+    """Register entities that are disabled by default as enabled, so they have a state."""
+    with patch(
+        "homeassistant.helpers.entity.Entity.entity_registry_enabled_default",
+        new_callable=PropertyMock,
+        return_value=True,
+    ):
+        yield
 
 
 def device_for(hass, entry):
@@ -97,7 +108,7 @@ async def test_single_charger_sets_up_with_entities(hass, evse_a):
     assert coordinator.device.send_port == evse_a.port
 
     ids = entity_ids(hass, entry)
-    assert len(ids) == 26, sorted(ids)
+    assert len(ids) == 31, sorted(ids)
     assert all(uid.startswith(f"{SERIAL_A}_") for uid in ids), sorted(ids)
     assert not any("00000000" in uid for uid in ids)
 
@@ -113,6 +124,8 @@ async def test_single_charger_sets_up_with_entities(hass, evse_a):
     device = device_for(hass, entry)
     assert device.identifiers == {(DOMAIN, SERIAL_A)}
     assert (device.manufacturer, device.model) == ("BESEN", "BS20")
+    # the login's version string is what the vendor app labels "Firmware version"
+    assert (device.sw_version, device.hw_version) == ("1.2.34", None)
     # the registry follows model and nickname, which land after the device is created
     assert device.name == "BS20 Garage"
     # has_entity_name prefixes it, so the device name is what every friendly name carries
@@ -334,7 +347,7 @@ async def test_start_charging_reaches_every_charger_before_reporting_a_failure(h
     entry_b.runtime_data.device._authenticated = False
     with pytest.raises(HomeAssistantError) as err:
         await hass.services.async_call(DOMAIN, "start_charging", targets, blocking=True)
-    assert err.value.translation_key == "start_failed"
+    assert err.value.translation_key == "action_failed"
     assert "BS20 Garage" in str(err.value) and "BS20 Carport" in str(err.value)
 
 
@@ -513,3 +526,136 @@ async def test_a_user_rename_survives_a_nickname_change(hass, evse_a):
     # and the user's name is what the entities actually display
     ids = entity_ids(hass, entry)
     assert hass.states.get(ids[f"{SERIAL_A}_current_state"]).name == "Rafael's charger Current State"
+
+
+async def test_the_fault_sensor_names_every_fault(hass):
+    evse = await FakeEvse(SERIAL_A, ip="127.0.0.1", errors=1 << 25 | 1).start()
+    try:
+        entry, ok = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
+        assert ok
+        fault = entity_ids(hass, entry)[f"{SERIAL_A}_fault"]
+        assert hass.states.get(fault).state == "emergency_stop"
+        assert hass.states.get(fault).attributes["faults"] == ["emergency_stop", "metering_module_failure"]
+
+        evse.errors = 0
+        await entry.runtime_data.device.request_status()
+        assert await until(hass, lambda: hass.states.get(fault).state == "none")
+        assert hass.states.get(fault).attributes["faults"] == []
+    finally:
+        evse.stop()
+
+
+async def test_the_language_select_sets_the_charger(hass, evse_a):
+    entry, ok = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
+    assert ok
+    select = entity_ids(hass, entry)[f"{SERIAL_A}_language"]
+    assert hass.states.get(select).state == "english"
+
+    await hass.services.async_call("select", "select_option", {"entity_id": select, "option": "german"}, blocking=True)
+    assert await until(hass, lambda: hass.states.get(select).state == "german")
+    assert evse_a.language == 3
+
+
+async def test_a_nickname_the_vendor_app_would_not_accept_is_refused(hass, evse_a):
+    entry, ok = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
+    assert ok
+    nickname = entity_ids(hass, entry)[f"{SERIAL_A}_nickname"]
+    with pytest.raises(ServiceValidationError) as err:
+        await hass.services.async_call("text", "set_value", {"entity_id": nickname, "value": "Garage 2"}, blocking=True)
+    assert err.value.translation_key == "invalid_value"
+
+
+async def test_last_session_sensors_are_disabled_by_default(hass, evse_a):
+    entry, ok = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
+    assert ok
+    ids = entity_ids(hass, entry)
+    registry = er.async_get(hass)
+    for key in ("end", "stop_reason"):
+        entity = registry.async_get(ids[f"{SERIAL_A}_last_session_{key}"])
+        assert entity.disabled_by is er.RegistryEntryDisabler.INTEGRATION, key
+
+
+@pytest.mark.usefixtures("entity_registry_enabled_by_default")
+async def test_a_finished_session_fills_last_session_and_survives_a_reload(hass, evse_a):
+    entry, ok = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
+    assert ok
+    ids = entity_ids(hass, entry)
+    end_id = ids[f"{SERIAL_A}_last_session_end"]
+    stop_reason_id = ids[f"{SERIAL_A}_last_session_stop_reason"]
+    assert hass.states.get(end_id).state == STATE_UNKNOWN
+
+    evse_a.upload_record(charge_record_payload(charge_id="Clock 1792140720", stop_reason=17))
+    assert await until(hass, lambda: hass.states.get(end_id).state != STATE_UNKNOWN)
+    assert CommandEnum.UPLOAD_LOCAL_CHARGE_RECORD_RESPONSE in evse_a.received, "the record was not acknowledged"
+    assert hass.states.get(stop_reason_id).state == "unplugged"
+    end = hass.states.get(end_id)
+    assert end.attributes["charge_id"] == "Clock 1792140720"
+
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await settle(hass)
+    assert hass.states.get(end_id).state == end.state, "the last session was lost on a reload"
+    assert hass.states.get(stop_reason_id).state == "unplugged"
+
+
+async def test_charge_history_returns_records_newest_first(hass, monkeypatch):
+    monkeypatch.setattr("evsemaster.device.HISTORY_REQUEST_INTERVAL", 0.01)
+    monkeypatch.setattr("evsemaster.device.HISTORY_REPLY_WAIT", 0.2)
+    history = {
+        1: charge_record_payload("older", start=1_790_000_000),
+        2: charge_record_payload("newest", start=1_792_000_000),
+        4: charge_record_payload("oldest", start=1_780_000_000),
+    }
+    evse = await FakeEvse(SERIAL_A, ip="127.0.0.1", history=history, history_capacity=5).start()
+    try:
+        entry, ok = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
+        assert ok
+        response = await hass.services.async_call(
+            DOMAIN,
+            "get_charge_history",
+            {"device_id": device_for(hass, entry).id, "limit": 2},
+            blocking=True,
+            return_response=True,
+        )
+        records = response[SERIAL_A]
+        assert [(record["slot"], record["charge_id"]) for record in records] == [(2, "newest"), (1, "older")]
+        assert records[0]["stop_reason"] == "client"
+        assert records[0]["start_type"] == "client"
+    finally:
+        evse.stop()
+
+
+async def test_set_weekly_plan_writes_the_days_and_the_sensor_follows(hass, evse_a):
+    entry, ok = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
+    assert ok
+    plan = entity_ids(hass, entry)[f"{SERIAL_A}_weekly_plan"]
+    assert hass.states.get(plan).state == "off"
+
+    await hass.services.async_call(
+        DOMAIN,
+        "set_weekly_plan",
+        {
+            "device_id": device_for(hass, entry).id,
+            "days": ["monday", "friday"],
+            "start_time": "22:00:00",
+            "end_time": "06:00:00",
+        },
+        blocking=True,
+    )
+    assert await until(hass, lambda: hass.states.get(plan).state == "on")
+    # an end before the start runs into the next day, as in the app
+    window = {"start": "22:00", "duration_minutes": 480}
+    assert {k: v for k, v in hass.states.get(plan).attributes.items() if k in WEEKDAYS} == {
+        "monday": window,
+        "friday": window,
+    }
+    written = evse_a.weekly_plan
+    assert written[0:9] == bytes.fromhex("03 16 00 01e0 ffffffff")
+    assert written[9:18] == bytes.fromhex("01 00 00 0000 ffffffff")
+
+    await hass.services.async_call(
+        DOMAIN,
+        "set_weekly_plan",
+        {"device_id": device_for(hass, entry).id, "start_time": "00:00:00", "end_time": "00:00:00"},
+        blocking=True,
+    )
+    assert await until(hass, lambda: hass.states.get(plan).state == "off"), "no days did not turn the plan off"

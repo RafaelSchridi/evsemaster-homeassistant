@@ -31,3 +31,59 @@ start_charging:
           max: 24
           step: 1
           unit_of_measurement: "h"
+set_weekly_plan:
+  name: Set Weekly Plan
+  description: >-
+    Set the charger's weekly plan with one daily charge window on the chosen days, like the EVSEMaster app.
+    A car plugged in during the window charges until it ends. Leave the days empty to turn the plan off.
+  target:
+    entity:
+      integration: evsemaster
+  fields:
+    days:
+      name: Days
+      description: Days the window applies to; days left out are switched off
+      required: false
+      selector:
+        select:
+          multiple: true
+          translation_key: weekday
+          options:
+            - monday
+            - tuesday
+            - wednesday
+            - thursday
+            - friday
+            - saturday
+            - sunday
+    start_time:
+      name: Start Time
+      description: When the window opens
+      required: true
+      selector:
+        time:
+    end_time:
+      name: End Time
+      description: When the window closes; earlier than the start runs into the next day, equal to it is 24 hours
+      required: true
+      selector:
+        time:
+get_charge_history:
+  name: Get Charge History
+  description: >-
+    Read the charging sessions stored on the charger (up to 300), newest first. Takes about 90 seconds, since the
+    charger answers one session at a time.
+  target:
+    entity:
+      integration: evsemaster
+  fields:
+    limit:
+      name: Limit
+      description: Return only this many of the newest sessions (leave empty for all)
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 300
+          step: 1
+          mode: box

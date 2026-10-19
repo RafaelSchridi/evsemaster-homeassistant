@@ -1,6 +1,13 @@
 DOMAIN = "evsemaster"
 SERVICE_ACTION_START_CHARGING = "start_charging"
+SERVICE_ACTION_SET_WEEKLY_PLAN = "set_weekly_plan"
+SERVICE_ACTION_GET_CHARGE_HISTORY = "get_charge_history"
 SERVICE_DATA_DURATION_HOURS = "duration_hours"
 SERVICE_DATA_MAX_AMPS = "max_amps"
 SERVICE_DATA_START_DATETIME = "start_datetime"
+SERVICE_DATA_DAYS = "days"
+SERVICE_DATA_START_TIME = "start_time"
+SERVICE_DATA_END_TIME = "end_time"
+SERVICE_DATA_LIMIT = "limit"
+WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 PARALLEL_UPDATES = 2

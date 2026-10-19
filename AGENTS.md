@@ -23,7 +23,7 @@ Import protocol classes straight from the package: `from evsemaster import EvseS
 
 To develop against unreleased library changes, `pip install -e ../evsemaster` into the venv that runs the tests or Home Assistant. Do not vendor the library into this repo — an `evsemaster` directory next to the integration's modules gets imported a second time as `custom_components.evsemaster.evsemaster`, and the duplicate classes make the coordinator's `isinstance(payload, EvseStatus)` checks fail silently, leaving every entity `unknown` with nothing in the log.
 
-Releases pin the library version in `manifest.json` requirements (`evsemaster==x.y.z`); bump it together with the manifest `version` field.
+Releases pin the library version in `manifest.json` requirements (`evsemaster==x.y.z`); bump it together with the manifest `version` field. Between releases the requirement may point at the library's `main` instead (`evsemaster@git+https://github.com/RafaelSchridi/evsemaster@main`, no spaces or hassfest rejects it), so unreleased library work can be tested and CI runs against it. Home Assistant reinstalls a URL requirement on every start. A release always puts the exact pin back.
 
 ## Validation
 
@@ -42,8 +42,10 @@ Two of its rules bite easily: `manifest.json` keys must be sorted (`domain`, `na
   - Push (primary data path, hence `local_push`): protocol `event_callback` → `_on_protocol_event` → `async_set_updated_data`.
   - Poll (60s) is a watchdog: status and charging-status pushes go through `async_set_updated_data`, which restarts the countdown, so it only runs after 60s without one. It ensures login and re-requests status.
     Device-info events use `async_update_listeners` instead, which leaves the countdown alone: a charger
-    that dropped its session sends `LOGIN_EVENT` every 3s and nothing else, and those would starve the poll. Essentials (nickname, configured amps) run on their own 30-minute `async_track_time_interval` timer.
-  - `coordinator.data` is a `DataSchema` pydantic model: `status` (`EvseStatus`), `charging_status` (`ChargingStatus`), `device` (`EvseDeviceInfo`).
+    that dropped its session sends `LOGIN_EVENT` every 3s and nothing else, and those would starve the poll. Essentials (nickname, configured amps, language, weekly plan) run on their own 30-minute `async_track_time_interval` timer. Weekly plan and charge record events use `async_update_listeners` too: a record backlog replays one every few seconds.
+  - `coordinator.data` is a `DataSchema` pydantic model: `status` (`EvseStatus`), `charging_status` (`ChargingStatus`), `device` (`EvseDeviceInfo`), `weekly_plan` (`WeeklyPlan`), `last_record` (`ChargeRecord`).
+  - `last_record` is the last finished session the library acknowledged, persisted in a `Store` per entry (`record_store`, deleted in `async_remove_entry`) so the last-session sensors survive a restart. Records arrive in the charger's ring order, so the latest arrival is the latest session.
+  - The device registry's `sw_version` is the login payload's version string, which the vendor app labels "Firmware version". `hw_version` is set to `None` on purpose, to clear what older releases stored there.
   - Device identity is `coordinator.unique_id`, which returns `entry.unique_id` and nothing else (the charger serial, backfilled on first login for entries created before multi-device support). It must never fall back to a value that can change: the host moves with DHCP and `data.device.serial_number` defaults to `00000000`, and every entity id is built from this, so a changing value re-registers the whole device as duplicates. Setup fails with `ConfigEntryError` if the first login yields no serial, which is what guarantees it is set before any entity exists.
   - Device name is `model + nickname` (`coordinator.device_name`), re-applied by
     `_async_follow_device_name` on every device-info event: `device_info` is only read when an
@@ -52,7 +54,7 @@ Two of its rules bite easily: `manifest.json` keys must be sorted (`domain`, `na
     slugged once at registration and never follow it.
   - All control actions (start/stop charging, nickname, max amps) run inside `_action_errors`, which turns library refusals into translated errors naming the charger (`display_name`, the user's rename included). Messages live under `exceptions` in `translations/en.json`; a failed stop has its own `stop_failed` message warning the car may still be charging.
 - `entity.py` — `EVSEMasterEntity`, the base for every platform: sets `_attr_unique_id` to `f"{coordinator.unique_id}_{_unique_id_key}"` and `_attr_device_info`. Platform classes only declare `_unique_id_key`, `_attr_translation_key` and their value property; state is read from `self.entry` (= `coordinator.data`). Display names come from `translations/en.json` via `_attr_translation_key`.
-- `__init__.py` registers the `evsemaster.start_charging` service in `async_setup` (once for the whole integration, not per entry, or a second charger steals the service) and resolves the call's target with `async_extract_config_entry_ids`. Every targeted charger gets the command before anything is raised: one failure is re-raised as is, several are combined into `start_failed`.
+- `__init__.py` registers the actions in `async_setup` (once for the whole integration, not per entry, or a second charger steals them): `start_charging`, `set_weekly_plan` and `get_charge_history` (response only, keyed by serial; it reads the charger's whole history, about 90 s). Targets resolve with `async_extract_config_entry_ids`, and all three run through `_async_on_each_target`: every targeted charger gets the command before anything is raised, one failure is re-raised as is, several are combined into `action_failed`.
 - `config_flow.py` — host + password form, plus an `integration_discovery` step that only asks for the password. Validation borrows the shared listener rather than binding its own socket. The entry `unique_id` is the charger serial, so re-running the flow repairs a changed IP.
 
 ## Behavior constraints

@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Awaitable, Callable
+from typing import Any
 
+import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
 from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady, HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.service import async_extract_config_entry_ids
@@ -14,17 +17,35 @@ from homeassistant.helpers.typing import ConfigType
 
 from .const import (
     DOMAIN,
+    SERVICE_ACTION_GET_CHARGE_HISTORY,
+    SERVICE_ACTION_SET_WEEKLY_PLAN,
     SERVICE_ACTION_START_CHARGING,
+    SERVICE_DATA_DAYS,
     SERVICE_DATA_DURATION_HOURS,
+    SERVICE_DATA_END_TIME,
+    SERVICE_DATA_LIMIT,
     SERVICE_DATA_MAX_AMPS,
     SERVICE_DATA_START_DATETIME,
+    SERVICE_DATA_START_TIME,
+    WEEKDAYS,
 )
-from .coordinator import EVSEMasterDataUpdateCoordinator
+from .coordinator import EVSEMasterDataUpdateCoordinator, record_store
 from .hub import async_release_listener
 
 _LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+SET_WEEKLY_PLAN_SCHEMA = cv.make_entity_service_schema(
+    {
+        vol.Optional(SERVICE_DATA_DAYS, default=[]): vol.All(cv.ensure_list, [vol.In(WEEKDAYS)]),
+        vol.Required(SERVICE_DATA_START_TIME): cv.time,
+        vol.Required(SERVICE_DATA_END_TIME): cv.time,
+    }
+)
+GET_CHARGE_HISTORY_SCHEMA = cv.make_entity_service_schema(
+    {vol.Optional(SERVICE_DATA_LIMIT): vol.All(vol.Coerce(int), vol.Range(min=1))}
+)
 
 PLATFORMS: list[Platform] = [
     Platform.SENSOR,
@@ -32,6 +53,7 @@ PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
     Platform.TEXT,
     Platform.NUMBER,
+    Platform.SELECT,
 ]
 
 
@@ -39,28 +61,63 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Register services once; they are shared by every charger."""
 
     async def start_charge_service_call(service: ServiceCall) -> None:
-        # every targeted charger gets the command, even when an earlier one fails
-        failures: list[HomeAssistantError] = []
-        for coordinator in await _async_target_coordinators(hass, service):
-            try:
-                await coordinator.async_start_charging(
-                    service.data.get(SERVICE_DATA_MAX_AMPS),
-                    service.data.get(SERVICE_DATA_START_DATETIME),
-                    service.data.get(SERVICE_DATA_DURATION_HOURS),
-                )
-            except HomeAssistantError as err:
-                failures.append(err)
-        if len(failures) == 1:
-            raise failures[0]
-        if failures:
-            raise HomeAssistantError(
-                translation_domain=DOMAIN,
-                translation_key="start_failed",
-                translation_placeholders={"errors": "; ".join(str(err) for err in failures)},
-            )
+        await _async_on_each_target(
+            hass,
+            service,
+            lambda coordinator: coordinator.async_start_charging(
+                service.data.get(SERVICE_DATA_MAX_AMPS),
+                service.data.get(SERVICE_DATA_START_DATETIME),
+                service.data.get(SERVICE_DATA_DURATION_HOURS),
+            ),
+        )
+
+    async def set_weekly_plan_service_call(service: ServiceCall) -> None:
+        days = [WEEKDAYS.index(day) for day in service.data[SERVICE_DATA_DAYS]]
+        start, end = service.data[SERVICE_DATA_START_TIME], service.data[SERVICE_DATA_END_TIME]
+        await _async_on_each_target(
+            hass, service, lambda coordinator: coordinator.async_set_weekly_plan(days, start, end)
+        )
+
+    async def get_charge_history_service_call(service: ServiceCall) -> ServiceResponse:
+        limit = service.data.get(SERVICE_DATA_LIMIT)
+        return await _async_on_each_target(hass, service, lambda coordinator: coordinator.async_read_history(limit))
 
     hass.services.async_register(DOMAIN, SERVICE_ACTION_START_CHARGING, start_charge_service_call)
+    hass.services.async_register(
+        DOMAIN, SERVICE_ACTION_SET_WEEKLY_PLAN, set_weekly_plan_service_call, schema=SET_WEEKLY_PLAN_SCHEMA
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_ACTION_GET_CHARGE_HISTORY,
+        get_charge_history_service_call,
+        schema=GET_CHARGE_HISTORY_SCHEMA,
+        supports_response=SupportsResponse.ONLY,
+    )
     return True
+
+
+async def _async_on_each_target(
+    hass: HomeAssistant,
+    service: ServiceCall,
+    action: Callable[[EVSEMasterDataUpdateCoordinator], Awaitable[Any]],
+) -> dict[str, Any]:
+    """Run action on every targeted charger before raising, keyed by serial; one failure is re-raised as is."""
+    results: dict[str, Any] = {}
+    failures: list[HomeAssistantError] = []
+    for coordinator in await _async_target_coordinators(hass, service):
+        try:
+            results[coordinator.unique_id] = await action(coordinator)
+        except HomeAssistantError as err:
+            failures.append(err)
+    if len(failures) == 1:
+        raise failures[0]
+    if failures:
+        raise HomeAssistantError(
+            translation_domain=DOMAIN,
+            translation_key="action_failed",
+            translation_placeholders={"errors": "; ".join(str(err) for err in failures)},
+        )
+    return results
 
 
 async def _async_target_coordinators(
@@ -102,6 +159,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Delete the stored last session along with the charger."""
+    await record_store(hass, entry).async_remove()
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

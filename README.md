@@ -52,13 +52,18 @@ This Home Assistant integration is based on the excellent work by **[@johnwoo-nl
 - Various sensors for monitoring charger status, energy consumption, and more (see specifics below).
 - Start/stop charging control.
 - Custom Action to start a single charging session with start delay and optional stop time.
+- Actions to set the charger's own weekly plan and to read the sessions stored on the charger.
 - Multiple chargers per Home Assistant instance, each its own device.
 - Chargers announce themselves, so extra ones are discovered automatically (see below).
 
 # Limitations
 
-- Doesn't do setup, you have to use the EVSEMaster app atleast once to set-up the WIFI.
+- Doesn't do setup: use the EVSEMaster app at least once to connect the charger to Wi-Fi.
 - Discovery only finds *additional* chargers: Home Assistant does not load this integration until one charger is set up, so the first one is always added by hand.
+- The integration acknowledges each finished session's record, which stops the charger from rebroadcasting it. The
+  EVSEMaster app builds its charge history only from records it acknowledged itself, so sessions Home Assistant saw
+  first are missing from the app's history. The charger keeps its last 300 sessions either way: read them with
+  `evsemaster.get_charge_history`.
 - Your Home Assistant must be able to receive the chargers' broadcast packets on UDP port 28376.
   A separate VLAN, or Docker bridge networking without `network_mode: host`, blocks them; without those broadcasts discovery and automatic re-login do not work.
 
@@ -87,30 +92,72 @@ data:
   duration_hours: 2
 ```
 
+### Set Weekly Plan (`evsemaster.set_weekly_plan`)
+
+Replace the charger's own weekly schedule, like the EVSEMaster app does: one charging window on the chosen days. A car
+plugged in during the window charges until the window ends; a car already plugged in starts when it opens. The charger
+runs the plan by itself, without Home Assistant.
+
+**Parameters:**
+- **`days`** (optional): `monday` … `sunday`. Days left out are switched off; no days at all turns the plan off.
+- **`start_time`**: When the window opens.
+- **`end_time`**: When it closes. An end before the start runs into the next day; an end equal to the start is 24 hours.
+
+A window that opens cancels a reservation made with `start_charging`.
+
+```yaml
+service: evsemaster.set_weekly_plan
+target:
+  device_id: YOUR_DEVICE_ID
+data:
+  days: [monday, tuesday, wednesday, thursday, friday]
+  start_time: "22:00"
+  end_time: "06:00"
+```
+
+### Get Charge History (`evsemaster.get_charge_history`)
+
+Returns the sessions stored on the charger (up to 300), newest first, keyed by charger serial. Each has its start and
+stop time, energy, duration, who started and stopped it, and why it stopped. Reading takes about 90 seconds, because
+the charger answers one session at a time.
+
+**Parameters:**
+- **`limit`** (optional): Return only this many of the newest sessions.
+
+```yaml
+service: evsemaster.get_charge_history
+target:
+  device_id: YOUR_DEVICE_ID
+data:
+  limit: 10
+response_variable: history
+```
+
 ---
 
 ## Entities
 
 ### Sensors
 
+Live readings go unavailable when the charger sends no heading for 35 seconds. Total Energy, Weekly Plan and the Last Session sensors keep their value.
+
 #### **Current State** (`sensor.*_current_state`)
 Shows the current operational state of the charger.  
 I.e., whether it is idle, charging, waiting, or not connected.
 
 #### **Current Power** (`sensor.*_current_power`)
-Real-time charging power consumption in Watts (W) while charging.  
+Real-time charging power in Watts (W). 
 **Should** be over all 3 phases, but not tested.
 
 #### **Plug State** (`sensor.*_plug_state`)
-Indicates whether a connector is plugged into the vehicle. 
-I.e., whether the vehicle is connected to the charger or not and if its locked.
+Whether a vehicle is connected, and whether the connector is locked.
 
 #### **Inner Temperature** (`sensor.*_inner_temperature`)
 Internal charger temperature in Celsius (°C).
 
 #### **Outer Temperature** (`sensor.*_outer_temperature`)
-Ambient/external temperature reading in Celsius (°C).
-- **Note:** On some devices like the Telestar and Besen this sensor is just the inner temperature again.
+Ambient/external temperature in Celsius (°C). 
+- **Note:** On some devices this sensor is just the inner temperature again.
 
 #### **Total Energy** (`sensor.*_total_energy`)
 Total cumulative energy delivered by the charger since it was first installed. This is a persistent counter that only increases.
@@ -129,10 +176,25 @@ The current limit the charger confirmed for the current or last session, in Ampe
 a `max_amps` passed to `start_charging` was applied.
 
 #### **Reservation Start** (`sensor.*_reservation_start`)
-The scheduled start time for a charging session if one is set via the `start_charging` service.
+When a reserved session starts, set with `start_charging`
 
 #### **Reservation Duration** (`sensor.*_reservation_duration`)
-The duration for a reserved charging session in minutes. set via the `start_charging` service.
+The time limit of a reserved session in minutes.
+
+#### **Fault** (`sensor.*_fault`)
+The fault the charger reports, such as an emergency stop, over temperature or a CP error, or `No fault`. With several
+at once the state is the first, and the `faults` attribute lists all of them; the EVSEMaster app shows only the first.
+
+#### **Last Session Stop Reason** (`sensor.*_last_session_stop_reason`)
+Why the last session stopped: stopped from the app or Home Assistant, cable unplugged, time limit reached, energy limit
+reached, power loss or reservation cancelled. **Disabled by default.**
+
+#### **Last Session End** (`sensor.*_last_session_end`)
+When the last session ended. Attributes: start time, who started and stopped it, and the charge id. **Disabled by default.**
+
+#### **Weekly Plan** (`sensor.*_weekly_plan`)
+`On` when the charger's weekly plan has any day enabled. Each enabled day is an attribute with its start time and duration. 
+Set it with `evsemaster.set_weekly_plan`.
 
 
 ### Binary Sensors
@@ -148,33 +210,40 @@ Indicates whether the charger is actively charging.
 ### Buttons
 
 #### **Start Charging** (`button.*_start_charging`)
-Triggers a charging session immediately
+Starts charging now, at the configured max amps and without a time limit.
+
 #### **Stop Charging** (`button.*_stop_charging`)
-Stops the current charging session, or cancels a scheduled one. 
-With no car connected and nothing scheduled, pressing it reports that there is nothing to stop. 
+Stops the current charging session, or cancels a scheduled one.
+With no car connected and nothing scheduled, pressing it reports that there is nothing to stop.
+
+---
+
 ## Configuration Entities
 These appear in the **Configuration** section of the device page.
 
 #### **Max Amps** (`number.*_max_amps`)
 Sets the maximum charging current for the charger. Range: 6 A to the device hardware limit.
 - **Warning:** Some devices (e.g. Besen B20) apply a new value during an active charging session; others
-  (e.g. Telestar EC311S6) only apply it when a charge starts, so on those this entity is unavailable while charging.
+  (Telestar EC311S and EC311S6) only apply it when a charge starts, so on those this entity is unavailable while charging.
+
+#### **Display Language** (`select.*_display_language`)
+The language of the charger's own display: English, Italian, German, French, Spanish, Hebrew, Polish, Turkish or
+Chinese (Traditional).
 
 #### **Nickname** (`text.*_nickname`)
-Custom name for the charger device for easy identification. Also changes the name displayed on the charger itself.
-- **Max Length:** Device-dependent (typically 28-32 characters)
+The charger's name, also shown on its own display. Max 28 characters: letters, digits and `_`.
 
 
 ## Diagnostic Entities
 
-These entities are disabled by default and appear in the **Diagnostic** section of the device page.
+These entities are **disabled by default** and appear in the **Diagnostic** section of the device page.
 
 ##### **Device Clock Offset** (`sensor.*_device_clock_offset`)
 Clock skew between the charger's internal clock and local time in seconds. Some firmware versions have a bug where the device clock drifts by weeks; when a discrepancy of more than 24 hours is detected, this integration automatically compensates when scheduling sessions. `0` means no workaround is active.
 
 ##### **Last Seen** (`sensor.*_last_seen`)
-When the charger last sent anything other than its periodic announcement. The integration treats the charger
-as connected while this is less than 120 seconds old. It updates with almost every packet, so enable it only while troubleshooting.
+When the charger last sent anything other than its periodic announcement. 
+**It updates with almost every packet,** so enable it only while troubleshooting.
 
 ##### **L1/L2/L3 Voltage** (`sensor.*_l1_voltage`, `l2_voltage`, `l3_voltage`)
 Per-phase voltage in Volts (V).

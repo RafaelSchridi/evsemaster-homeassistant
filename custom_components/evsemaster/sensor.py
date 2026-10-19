@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
-from evsemaster import CurrentStateEnum, EvseStatus, PlugStateEnum
+from evsemaster import CurrentStateEnum, EvseStatus, FaultEnum, PlugStateEnum, StopReasonEnum
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -23,6 +24,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from .const import WEEKDAYS
 from .coordinator import EVSEMasterDataUpdateCoordinator
 from .entity import EVSEMasterEntity, EVSEMasterLiveEntity
 
@@ -55,6 +57,10 @@ async def async_setup_entry(
     entities.append(EVSEL1CurrentSensor(coordinator))
     entities.append(EVSEL2CurrentSensor(coordinator))
     entities.append(EVSEL3CurrentSensor(coordinator))
+    entities.append(EVSEFaultSensor(coordinator))
+    entities.append(EVSELastSessionEndSensor(coordinator))
+    entities.append(EVSELastSessionStopReasonSensor(coordinator))
+    entities.append(EVSEWeeklyPlanSensor(coordinator))
 
     async_add_entities(entities)
 
@@ -339,3 +345,90 @@ class EVSEL3CurrentSensor(_BasePhase):
     def native_value(self) -> float | None:
         status = self.entry.status
         return status.l3_amps if status else None
+
+
+class EVSEFaultSensor(EVSEMasterLiveEntity, SensorEntity):
+    _attr_translation_key = "fault"
+    _unique_id_key = "fault"
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = [fault.name.lower() for fault in FaultEnum] + ["none"]
+
+    @property
+    def native_value(self) -> str | None:
+        """The lowest-numbered fault; the attribute lists all of them."""
+        status: EvseStatus = self.entry.status
+        if not status:
+            return None
+        if not status.faults:
+            return "none"
+        return status.faults[0].name.lower()
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        status: EvseStatus = self.entry.status
+        if not status:
+            return None
+        return {"faults": [fault.name.lower() for fault in status.faults]}
+
+
+class EVSELastSessionEndSensor(EVSEMasterEntity, SensorEntity):
+    _attr_translation_key = "last_session_end"
+    _unique_id_key = "last_session_end"
+    _attr_entity_registry_enabled_default = False
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    @property
+    def native_value(self) -> datetime | None:
+        record = self.entry.last_record
+        return record.stop_datetime if record else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        record = self.entry.last_record
+        if not record:
+            return None
+        return {
+            "start": record.start_datetime,
+            "start_type": record.start_type.name.lower(),
+            "started_by": record.started_by,
+            "stopped_by": record.stopped_by,
+            "charge_id": record.charge_id,
+        }
+
+
+class EVSELastSessionStopReasonSensor(EVSEMasterEntity, SensorEntity):
+    _attr_translation_key = "last_session_stop_reason"
+    _unique_id_key = "last_session_stop_reason"
+    _attr_entity_registry_enabled_default = False
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = [reason.name.lower() for reason in StopReasonEnum]
+
+    @property
+    def native_value(self) -> str | None:
+        record = self.entry.last_record
+        return record.stop_reason.name.lower() if record else None
+
+
+class EVSEWeeklyPlanSensor(EVSEMasterEntity, SensorEntity):
+    _attr_translation_key = "weekly_plan"
+    _unique_id_key = "weekly_plan"
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = ["on", "off"]
+
+    @property
+    def native_value(self) -> str | None:
+        plan = self.entry.weekly_plan
+        if not plan:
+            return None
+        return "on" if any(slot.enabled for slot in plan.slots) else "off"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        plan = self.entry.weekly_plan
+        if not plan:
+            return None
+        return {
+            day: {"start": slot.start.strftime("%H:%M"), "duration_minutes": slot.duration_minutes}
+            for day, slot in zip(WEEKDAYS, plan.slots, strict=True)
+            if slot.enabled
+        }

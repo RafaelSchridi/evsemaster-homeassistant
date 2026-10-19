@@ -105,6 +105,93 @@
       },
       "l3_current": {
         "name": "L3 Current"
+      },
+      "fault": {
+        "name": "Fault",
+        "state": {
+          "relay_stuck_l1": "Relay stuck (L1)",
+          "relay_stuck_l2": "Relay stuck (L2)",
+          "relay_stuck_l3": "Relay stuck (L3)",
+          "offline": "Offline",
+          "cc_error": "CC error",
+          "cp_error": "CP error",
+          "emergency_stop": "Emergency stop",
+          "over_temperature_inner": "Over temperature (inside)",
+          "over_temperature_outer": "Over temperature (outside)",
+          "unknown_error": "Unknown error",
+          "leakage_protection": "Leakage protection",
+          "short_circuit": "Short circuit",
+          "over_current": "Over current",
+          "not_grounded": "Not grounded",
+          "over_voltage": "Over voltage",
+          "low_voltage": "Low voltage",
+          "fault_16": "Fault 16",
+          "fault_17": "Fault 17",
+          "fault_18": "Fault 18",
+          "fault_19": "Fault 19",
+          "fault_20": "Fault 20",
+          "fault_21": "Fault 21",
+          "fault_22": "Fault 22",
+          "fault_23": "Fault 23",
+          "no_ventilation": "No ventilation",
+          "input_power_error": "Input power error",
+          "mains_overload": "Mains overload",
+          "diode_short_circuit": "Diode short circuit",
+          "rtc_failure": "Clock (RTC) failure",
+          "flash_failure": "Flash failure",
+          "eeprom_failure": "EEPROM failure",
+          "metering_module_failure": "Metering module failure",
+          "none": "No fault"
+        },
+        "state_attributes": {
+          "faults": {
+            "name": "Faults"
+          }
+        }
+      },
+      "last_session_end": {
+        "name": "Last Session End",
+        "state_attributes": {
+          "start": {
+            "name": "Start"
+          },
+          "start_type": {
+            "name": "Started by",
+            "state": {
+              "client": "App or Home Assistant",
+              "plug_and_charge": "Plugging in",
+              "schedule": "Weekly plan"
+            }
+          },
+          "started_by": {
+            "name": "Started by user"
+          },
+          "stopped_by": {
+            "name": "Stopped by"
+          },
+          "charge_id": {
+            "name": "Charge ID"
+          }
+        }
+      },
+      "last_session_stop_reason": {
+        "name": "Last Session Stop Reason",
+        "state": {
+          "reservation_cancelled": "Reservation cancelled",
+          "client": "Stopped from the app or Home Assistant",
+          "auto_stop": "Auto stop",
+          "energy_limit": "Energy limit reached",
+          "time_limit": "Time limit reached",
+          "unplugged": "Cable unplugged",
+          "power_loss": "Power loss"
+        }
+      },
+      "weekly_plan": {
+        "name": "Weekly Plan",
+        "state": {
+          "on": "On",
+          "off": "Off"
+        }
       }
     },
     "binary_sensor": {
@@ -131,6 +218,22 @@
     "number": {
       "max_amps": {
         "name": "Max Amps"
+      }
+    },
+    "select": {
+      "language": {
+        "name": "Display Language",
+        "state": {
+          "english": "English",
+          "italian": "Italian",
+          "german": "German",
+          "french": "French",
+          "spanish": "Spanish",
+          "hebrew": "Hebrew",
+          "polish": "Polish",
+          "turkish": "Turkish",
+          "chinese_traditional": "Chinese (Traditional)"
+        }
       }
     }
   },
@@ -162,8 +265,21 @@
     "no_matching_charger": {
       "message": "No EVSEMaster charger matched the target of this action."
     },
-    "start_failed": {
-      "message": "Charging did not start on every charger: {errors}"
+    "action_failed": {
+      "message": "The action did not succeed on every charger: {errors}"
+    }
+  },
+  "selector": {
+    "weekday": {
+      "options": {
+        "monday": "Monday",
+        "tuesday": "Tuesday",
+        "wednesday": "Wednesday",
+        "thursday": "Thursday",
+        "friday": "Friday",
+        "saturday": "Saturday",
+        "sunday": "Sunday"
+      }
     }
   }
 }
