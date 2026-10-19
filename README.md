@@ -231,7 +231,8 @@ The language of the charger's own display: English, Italian, German, French, Spa
 Chinese (Traditional).
 
 #### **Nickname** (`text.*_nickname`)
-The charger's name, also shown on its own display. Max 28 characters: letters, digits and `_`.
+The charger's name, also shown on its own display. Up to 11 characters: letters, digits, spaces and punctuation.
+Accents are refused, because the display leaves them blank.
 
 
 ## Diagnostic Entities

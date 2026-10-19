@@ -35,6 +35,7 @@ class EVSENicknameText(EVSEMasterEntity, TextEntity):
     _unique_id_key = "nickname"
     _attr_icon = "mdi:tag-text"
     _attr_mode = "text"
+    _attr_native_max = 11
     _attr_entity_category = EntityCategory.CONFIG
 
     @property

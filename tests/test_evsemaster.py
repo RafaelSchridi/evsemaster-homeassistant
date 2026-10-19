@@ -556,12 +556,13 @@ async def test_the_language_select_sets_the_charger(hass, evse_a):
     assert evse_a.language == 3
 
 
-async def test_a_nickname_the_vendor_app_would_not_accept_is_refused(hass, evse_a):
+async def test_a_nickname_the_charger_would_not_show_is_refused(hass, evse_a):
     entry, ok = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
     assert ok
     nickname = entity_ids(hass, entry)[f"{SERIAL_A}_nickname"]
+    assert hass.states.get(nickname).attributes["max"] == 11
     with pytest.raises(ServiceValidationError) as err:
-        await hass.services.async_call("text", "set_value", {"entity_id": nickname, "value": "Garage 2"}, blocking=True)
+        await hass.services.async_call("text", "set_value", {"entity_id": nickname, "value": "Garáž"}, blocking=True)
     assert err.value.translation_key == "invalid_value"
 
 
