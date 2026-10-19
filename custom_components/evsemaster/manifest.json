@@ -19,5 +19,5 @@
   "requirements": [
     "evsemaster@git+https://github.com/RafaelSchridi/evsemaster@main"
   ],
-  "version": "1.6.3"
+  "version": "1.7.0"
 }
