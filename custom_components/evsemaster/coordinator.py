@@ -304,18 +304,21 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
         with self._action_errors():
             return await self.device.set_weekly_plan(plan)
 
-    async def async_read_history(self, limit: int | None = None) -> list[dict[str, Any]]:
-        """The charger's stored sessions, newest first."""
+    async def async_read_history(self) -> dict[str, Any]:
+        """The charger's stored sessions, newest first, and the slots that never answered."""
         with self._action_errors():
             history = await self.device.read_history()
         oldest = datetime.min.replace(tzinfo=UTC)
-        records = sorted(history.items(), key=lambda item: item[1].start_datetime or oldest, reverse=True)
-        return [
-            {
-                "slot": slot,
-                **record.model_dump(mode="json"),
-                "start_type": record.start_type.name.lower(),
-                "stop_reason": record.stop_reason.name.lower(),
-            }
-            for slot, record in records[:limit]
-        ]
+        records = sorted(history.records.items(), key=lambda item: item[1].start_datetime or oldest, reverse=True)
+        return {
+            "records": [
+                {
+                    "slot": slot,
+                    **record.model_dump(mode="json"),
+                    "start_type": record.start_type.name.lower(),
+                    "stop_reason": record.stop_reason.name.lower(),
+                }
+                for slot, record in records
+            ],
+            "unread_slots": history.unread_slots,
+        }

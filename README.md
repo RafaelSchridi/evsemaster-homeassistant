@@ -101,7 +101,8 @@ runs the plan by itself, without Home Assistant.
 **Parameters:**
 - **`days`** (optional): `monday` … `sunday`. Days left out are switched off; no days at all turns the plan off.
 - **`start_time`**: When the window opens.
-- **`end_time`**: When it closes. An end before the start runs into the next day; an end equal to the start is 24 hours.
+- **`end_time`**: When it closes. If this is earlier than the start time, the window ends the next day. If it equals
+  the start time, the window lasts 24 hours.
 
 A window that opens cancels a reservation made with `start_charging`.
 
@@ -117,19 +118,21 @@ data:
 
 ### Get Charge History (`evsemaster.get_charge_history`)
 
-Returns the sessions stored on the charger (up to 300), newest first, keyed by charger serial. Each has its start and
-stop time, energy, duration, who started and stopped it, and why it stopped. Reading takes about 90 seconds, because
-the charger answers one session at a time.
+Returns every session stored on the charger, newest first. Each has its start and stop time, energy, duration, who
+started and stopped it, and why it stopped.
 
-**Parameters:**
-- **`limit`** (optional): Return only this many of the newest sessions.
+The charger keeps its last 300 sessions in numbered slots, but it does not say which slot holds the newest one. So the
+action reads every slot, one at a time. This takes a few minutes per charger, also when you need only the last
+session. Several chargers are read one after another.
+
+The response is keyed by charger serial. Each charger has:
+- **`records`**: the sessions, newest first.
+- **`unread_slots`**: slots that did not answer, even after retries. Usually empty.
 
 ```yaml
 service: evsemaster.get_charge_history
 target:
   device_id: YOUR_DEVICE_ID
-data:
-  limit: 10
 response_variable: history
 ```
 

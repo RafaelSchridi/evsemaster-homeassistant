@@ -64,26 +64,18 @@ set_weekly_plan:
         time:
     end_time:
       name: End Time
-      description: When the window closes; earlier than the start runs into the next day, equal to it is 24 hours
+      description: >-
+        When the window closes. If this is earlier than the start time, the window ends the next day. If it equals
+        the start time, the window lasts 24 hours.
       required: true
       selector:
         time:
 get_charge_history:
   name: Get Charge History
   description: >-
-    Read the charging sessions stored on the charger (up to 300), newest first. Takes about 90 seconds, since the
-    charger answers one session at a time.
+    Read every charging session stored on the charger, newest first. The charger keeps up to 300 sessions but does not
+    say which one is the newest, so the action reads all of them, one at a time. This takes a few minutes per
+    charger, also when you need only the last session. Several chargers are read one after another.
   target:
     entity:
       integration: evsemaster
-  fields:
-    limit:
-      name: Limit
-      description: Return only this many of the newest sessions (leave empty for all)
-      required: false
-      selector:
-        number:
-          min: 1
-          max: 300
-          step: 1
-          mode: box

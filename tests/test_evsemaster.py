@@ -613,12 +613,17 @@ async def test_charge_history_returns_records_newest_first(hass, monkeypatch):
         response = await hass.services.async_call(
             DOMAIN,
             "get_charge_history",
-            {"device_id": device_for(hass, entry).id, "limit": 2},
+            {"device_id": device_for(hass, entry).id},
             blocking=True,
             return_response=True,
         )
-        records = response[SERIAL_A]
-        assert [(record["slot"], record["charge_id"]) for record in records] == [(2, "newest"), (1, "older")]
+        records = response[SERIAL_A]["records"]
+        assert [(record["slot"], record["charge_id"]) for record in records] == [
+            (2, "newest"),
+            (1, "older"),
+            (4, "oldest"),
+        ]
+        assert response[SERIAL_A]["unread_slots"] == []
         assert records[0]["stop_reason"] == "client"
         assert records[0]["start_type"] == "client"
     finally:

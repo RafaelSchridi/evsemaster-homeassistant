@@ -23,7 +23,6 @@ from .const import (
     SERVICE_DATA_DAYS,
     SERVICE_DATA_DURATION_HOURS,
     SERVICE_DATA_END_TIME,
-    SERVICE_DATA_LIMIT,
     SERVICE_DATA_MAX_AMPS,
     SERVICE_DATA_START_DATETIME,
     SERVICE_DATA_START_TIME,
@@ -42,9 +41,6 @@ SET_WEEKLY_PLAN_SCHEMA = cv.make_entity_service_schema(
         vol.Required(SERVICE_DATA_START_TIME): cv.time,
         vol.Required(SERVICE_DATA_END_TIME): cv.time,
     }
-)
-GET_CHARGE_HISTORY_SCHEMA = cv.make_entity_service_schema(
-    {vol.Optional(SERVICE_DATA_LIMIT): vol.All(vol.Coerce(int), vol.Range(min=1))}
 )
 
 PLATFORMS: list[Platform] = [
@@ -79,8 +75,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         )
 
     async def get_charge_history_service_call(service: ServiceCall) -> ServiceResponse:
-        limit = service.data.get(SERVICE_DATA_LIMIT)
-        return await _async_on_each_target(hass, service, lambda coordinator: coordinator.async_read_history(limit))
+        return await _async_on_each_target(hass, service, lambda coordinator: coordinator.async_read_history())
 
     hass.services.async_register(DOMAIN, SERVICE_ACTION_START_CHARGING, start_charge_service_call)
     hass.services.async_register(
@@ -90,7 +85,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         DOMAIN,
         SERVICE_ACTION_GET_CHARGE_HISTORY,
         get_charge_history_service_call,
-        schema=GET_CHARGE_HISTORY_SCHEMA,
+        schema=cv.make_entity_service_schema({}),
         supports_response=SupportsResponse.ONLY,
     )
     return True

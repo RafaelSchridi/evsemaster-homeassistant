@@ -8,6 +8,5 @@ SERVICE_DATA_START_DATETIME = "start_datetime"
 SERVICE_DATA_DAYS = "days"
 SERVICE_DATA_START_TIME = "start_time"
 SERVICE_DATA_END_TIME = "end_time"
-SERVICE_DATA_LIMIT = "limit"
 WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 PARALLEL_UPDATES = 2
