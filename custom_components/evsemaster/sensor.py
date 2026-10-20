@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from evsemaster import CurrentStateEnum, EvseStatus, FaultEnum, PlugStateEnum, StopReasonEnum
+from evsemaster import CurrentStateEnum, EvseStatus, FaultEnum, PlugStateEnum, StartTypeEnum, StopReasonEnum
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -389,9 +389,7 @@ class EVSELastSessionEndSensor(EVSEMasterEntity, SensorEntity):
             return None
         return {
             "start": record.start_datetime,
-            "start_type": record.start_type.name.lower(),
-            "started_by": record.started_by,
-            "stopped_by": record.stopped_by,
+            "started_by": _origin(record.start_type, record.started_by, self.coordinator.device.user_id),
             "charge_id": record.charge_id,
         }
 
@@ -401,12 +399,23 @@ class EVSELastSessionStopReasonSensor(EVSEMasterEntity, SensorEntity):
     _unique_id_key = "last_session_stop_reason"
     _attr_entity_registry_enabled_default = False
     _attr_device_class = SensorDeviceClass.ENUM
-    _attr_options = [reason.name.lower() for reason in StopReasonEnum]
+    _attr_options = [reason.name.lower() for reason in StopReasonEnum if reason is not StopReasonEnum.CLIENT] + [
+        "home_assistant",
+        "app",
+    ]
 
     @property
     def native_value(self) -> str | None:
         record = self.entry.last_record
-        return record.stop_reason.name.lower() if record else None
+        if not record:
+            return None
+        return _origin(record.stop_reason, record.stopped_by, self.coordinator.device.user_id)
+
+
+def _origin(member: StartTypeEnum | StopReasonEnum, by: str, user_id: str) -> str:
+    if member.name != "CLIENT":
+        return member.name.lower()
+    return "home_assistant" if by == user_id else "app"
 
 
 class EVSEWeeklyPlanSensor(EVSEMasterEntity, SensorEntity):

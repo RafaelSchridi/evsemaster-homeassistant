@@ -155,19 +155,14 @@
           "start": {
             "name": "Start"
           },
-          "start_type": {
+          "started_by": {
             "name": "Started by",
             "state": {
-              "client": "App or Home Assistant",
+              "home_assistant": "Home Assistant",
+              "app": "EVSEMaster app",
               "plug_and_charge": "Plugging in",
               "schedule": "Weekly plan"
             }
-          },
-          "started_by": {
-            "name": "Started by user"
-          },
-          "stopped_by": {
-            "name": "Stopped by"
           },
           "charge_id": {
             "name": "Charge ID"
@@ -178,7 +173,8 @@
         "name": "Last Session Stop Reason",
         "state": {
           "reservation_cancelled": "Reservation cancelled",
-          "client": "Stopped from the app or Home Assistant",
+          "home_assistant": "Stopped from Home Assistant",
+          "app": "Stopped from the EVSEMaster app",
           "auto_stop": "Auto stop",
           "energy_limit": "Energy limit reached",
           "time_limit": "Time limit reached",

@@ -598,6 +598,20 @@ async def test_a_finished_session_fills_last_session_and_survives_a_reload(hass,
     assert hass.states.get(stop_reason_id).state == "unplugged"
 
 
+@pytest.mark.usefixtures("entity_registry_enabled_by_default")
+@pytest.mark.parametrize(("user_id", "origin"), [("evsemasterpy", "home_assistant"), ("a81f3c07", "app")])
+async def test_a_client_session_names_home_assistant_or_the_app(hass, evse_a, user_id, origin):
+    entry, ok = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
+    assert ok
+    ids = entity_ids(hass, entry)
+    end_id = ids[f"{SERIAL_A}_last_session_end"]
+
+    evse_a.upload_record(charge_record_payload(started_by=user_id, stopped_by=user_id))
+    assert await until(hass, lambda: hass.states.get(end_id).state != STATE_UNKNOWN)
+    assert hass.states.get(end_id).attributes["started_by"] == origin
+    assert hass.states.get(ids[f"{SERIAL_A}_last_session_stop_reason"]).state == origin
+
+
 async def test_charge_history_returns_records_newest_first(hass, monkeypatch):
     monkeypatch.setattr("evsemaster.device.HISTORY_REQUEST_INTERVAL", 0.01)
     monkeypatch.setattr("evsemaster.device.HISTORY_REPLY_WAIT", 0.2)

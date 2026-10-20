@@ -189,11 +189,11 @@ The fault the charger reports, such as an emergency stop, over temperature or a 
 at once the state is the first, and the `faults` attribute lists all of them; the EVSEMaster app shows only the first.
 
 #### **Last Session Stop Reason** (`sensor.*_last_session_stop_reason`)
-Why the last session stopped: stopped from the app or Home Assistant, cable unplugged, time limit reached, energy limit
-reached, power loss or reservation cancelled. **Disabled by default.**
+Why the last session stopped: stopped from Home Assistant, stopped from the EVSEMaster app, cable unplugged, time limit
+reached, energy limit reached, power loss or reservation cancelled. **Disabled by default.**
 
 #### **Last Session End** (`sensor.*_last_session_end`)
-When the last session ended. Attributes: start time, who started and stopped it, and the charge id. **Disabled by default.**
+When the last session ended. Attributes: start time, what started it and the charge id. **Disabled by default.**
 
 #### **Weekly Plan** (`sensor.*_weekly_plan`)
 `On` when the charger's weekly plan has any day enabled. Each enabled day is an attribute with its start time and duration. 
