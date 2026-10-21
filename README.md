@@ -23,21 +23,9 @@ If you do not have HACS yet, [follow the official guide](https://hacs.xyz/docs/u
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=RafaelSchridi&repository=evsemaster-homeassistant&category=integration)
 
-1. Click the above link to open the repository in HACS.
-2. Click Download
-3. Restart Home Assistant
+Or: **HACS** in the sidebar → search for **EVSEMaster**.
 
-<details>
-<summary>Or add it manually</summary>
-
-1. Go to **HACS** in the Home Assistant sidebar.
-2. Click the **⋮** menu (top right) → **Custom repositories**.
-3. Repository: `https://github.com/RafaelSchridi/evsemaster-homeassistant`
-4. Type: **Integration**, then click **Add**.
-5. Search for **EVSEMaster** in HACS, open it and click **Download**.
-6. Restart Home Assistant.
-
-</details>
+Then click **Download** and restart Home Assistant.
 
 ### 2. Add the integration
 
