@@ -3,7 +3,7 @@
 [![Active installs](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fanalytics.home-assistant.io%2Fcustom_integrations.json&query=%24.evsemaster.total&label=active%20installs&logo=homeassistant&color=41BDF5&cacheSeconds=86400)](https://analytics.home-assistant.io/custom_integrations.json)
 [![Latest release](https://img.shields.io/github/v/release/RafaelSchridi/evsemaster-homeassistant)](https://github.com/RafaelSchridi/evsemaster-homeassistant/releases)
 [![CI](https://github.com/RafaelSchridi/evsemaster-homeassistant/actions/workflows/ci.yaml/badge.svg)](https://github.com/RafaelSchridi/evsemaster-homeassistant/actions/workflows/ci.yaml)
-[![License](https://img.shields.io/github/license/RafaelSchridi/evsemaster-homeassistant)](LICENSE)
+[![License](https://img.shields.io/github/license/RafaelSchridi/evsemaster-homeassistant)](https://github.com/RafaelSchridi/evsemaster-homeassistant/blob/main/LICENSE)
 
 This Unofficial Home Assistant integration provides comprehensive control and monitoring of EVSE chargers that are compatible with the EVSEMaster app. While all testing was done on Telestar device, it should work with all devices that use the app like the one from Besen, Telestar, evseODM, Morec, Deltacom, etc.
 
