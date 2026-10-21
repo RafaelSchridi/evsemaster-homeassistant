@@ -4,6 +4,11 @@ This Unofficial Home Assistant integration provides comprehensive control and mo
 
 The underlying implementation is factored out to a separate Python package: https://github.com/RafaelSchridi/evsemaster
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/dashboard-dark.png">
+  <img alt="A Home Assistant dashboard built from the integration's entities" src="images/dashboard-light.png">
+</picture>
+
 ## Verified Compatible Devices
 - Telestar EC311S & EC311S6
 - [Besen B20](https://github.com/RafaelSchridi/evsemaster-homeassistant/issues/1)
