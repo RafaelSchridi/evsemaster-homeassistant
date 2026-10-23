@@ -137,8 +137,6 @@ response_variable: history
 
 ### Sensors
 
-Live readings go unavailable when the charger sends no heading for 35 seconds. Total Energy, Weekly Plan and the Last Session sensors keep their value.
-
 #### **Current State** (`sensor.*_current_state`)
 Shows the current operational state of the charger.  
 I.e., whether it is idle, charging, waiting, or not connected.

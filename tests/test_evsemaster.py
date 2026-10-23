@@ -19,7 +19,7 @@ from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
 from custom_components.evsemaster.const import DOMAIN, WEEKDAYS
-from custom_components.evsemaster.coordinator import ESSENTIALS_INTERVAL
+from custom_components.evsemaster.coordinator import ESSENTIALS_INTERVAL, record_store
 
 SERIAL_A = "aa" * 8
 SERIAL_B = "bb" * 8
@@ -610,6 +610,33 @@ async def test_a_client_session_names_home_assistant_or_the_app(hass, evse_a, us
     assert await until(hass, lambda: hass.states.get(end_id).state != STATE_UNKNOWN)
     assert hass.states.get(end_id).attributes["started_by"] == origin
     assert hass.states.get(ids[f"{SERIAL_A}_last_session_stop_reason"]).state == origin
+
+
+@pytest.mark.usefixtures("entity_registry_enabled_by_default")
+async def test_a_stored_session_the_library_cannot_read_is_dropped(hass, evse_a):
+    entry, ok = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
+    assert ok
+    end_id = entity_ids(hass, entry)[f"{SERIAL_A}_last_session_end"]
+    await record_store(hass, entry).async_save({"charge_id": None})
+
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await settle(hass)
+    assert hass.states.get(end_id).state == STATE_UNKNOWN
+
+
+@pytest.mark.usefixtures("entity_registry_enabled_by_default")
+async def test_a_replayed_older_record_does_not_replace_the_last_session(hass, evse_a):
+    entry, ok = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
+    assert ok
+    end_id = entity_ids(hass, entry)[f"{SERIAL_A}_last_session_end"]
+
+    evse_a.upload_record(charge_record_payload("newer", start=1_792_000_000))
+    assert await until(hass, lambda: hass.states.get(end_id).attributes.get("charge_id") == "newer")
+    evse_a.upload_record(charge_record_payload("older", start=1_790_000_000))
+    ack = CommandEnum.UPLOAD_LOCAL_CHARGE_RECORD_RESPONSE
+    assert await until(hass, lambda: b"older" in evse_a.payloads.get(ack, b""))
+    await settle(hass)
+    assert hass.states.get(end_id).attributes["charge_id"] == "newer"
 
 
 async def test_charge_history_returns_records_newest_first(hass, monkeypatch):

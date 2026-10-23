@@ -80,6 +80,9 @@ Two of its rules bite easily: `manifest.json` keys must be sorted (`domain`, `na
   watchdog's login, so the coordinator stays successful and only the snapshot is stale. Controls, the
   energy total (a meter reading does not go stale like a live one) and the session diagnostics
   (`time_delta`, `last_alive`) stay on `EVSEMasterEntity`.
+- Nothing redraws entities when `HEADING_TIMEOUT` passes: availability is re-read on the next coordinator update,
+  in practice the 60 s watchdog. An unreachable charger therefore blanks every entity at once, about 70 s after
+  its last push, once the watchdog's login times out.
 - Unmapped firmware states arrive as `PlugStateEnum.UNKNOWN` / `CurrentStateEnum.UNKNOWN` (library
   2.0.2+). Both state sensors are `device_class: enum` and list every member, `unknown` included, so
   the enum stays the single source of truth with no "except this one" rule to keep in sync. hassfest

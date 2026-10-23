@@ -148,6 +148,9 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
                 self.data.weekly_plan = payload
                 self.async_update_listeners()
             elif event_type == ChargeRecord.__name__ and isinstance(payload, ChargeRecord):
+                # a replayed backlog can deliver an older record after a newer one
+                if self.data.last_record and payload.stop_datetime < self.data.last_record.stop_datetime:
+                    return
                 self.data.last_record = payload
                 self.async_update_listeners()
                 await self._store.async_save(payload.model_dump(mode="json"))
