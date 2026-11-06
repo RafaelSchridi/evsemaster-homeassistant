@@ -16,7 +16,11 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.loader import async_get_integration
 from homeassistant.util import dt as dt_util
-from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
+
+try:
+    from pytest_homeassistant.common import MockConfigEntry, async_fire_time_changed
+except ImportError:  # the floor CI job, see conftest.py
+    from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
 from custom_components.evsemaster.const import DOMAIN, WEEKDAYS
 from custom_components.evsemaster.coordinator import ESSENTIALS_INTERVAL, record_store

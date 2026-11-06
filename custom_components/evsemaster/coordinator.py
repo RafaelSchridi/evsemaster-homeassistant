@@ -108,18 +108,18 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
         return devices[0].name_by_user or devices[0].name or self.host
 
     @property
-    def device_info(self) -> dict[str, Any]:
+    def device_info(self) -> dr.DeviceInfo:
         """Device registry entry for this charger."""
         device = self.data.device
-        return {
-            "identifiers": {(DOMAIN, self.unique_id)},
-            "name": self.device_name,
-            "manufacturer": device.brand,
-            "model": device.model,
-            "serial_number": self.unique_id,
-            "sw_version": device.firmware_version,
-            "hw_version": None,  # the registry keeps an old value until it is overwritten
-        }
+        return dr.DeviceInfo(
+            identifiers={(DOMAIN, self.unique_id)},
+            name=self.device_name,
+            manufacturer=device.brand,
+            model=device.model,
+            serial_number=self.unique_id,
+            sw_version=device.firmware_version,
+            hw_version=None,  # the registry keeps an old value until it is overwritten
+        )
 
     def _ensure_serial(self) -> None:
         """Copy freshly parsed device info into the coordinator data."""

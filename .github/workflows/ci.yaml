@@ -21,14 +21,25 @@ jobs:
       - run: ruff format --check
 
   test:
+    name: test (${{ matrix.target }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: pinned
+            requirements: -r requirements_test.txt
+          - target: floor
+            # Tracks hacs.json "homeassistant" (2026.3.0). pytest-homeassistant starts at 2026.11, so this runs on
+            # its predecessor; no release of that bundles 2026.3.0, this one bundles 2026.3.1.
+            requirements: pytest-homeassistant-custom-component==0.13.317
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
       # Install the integration's requirements from manifest.json, so CI tests the library version that ships.
-      - run: pip install -r requirements_test.txt $(jq -r '.requirements[]' custom_components/evsemaster/manifest.json)
+      - run: pip install ${{ matrix.requirements }} $(jq -r '.requirements[]' custom_components/evsemaster/manifest.json)
       - run: pytest
 
   hassfest:

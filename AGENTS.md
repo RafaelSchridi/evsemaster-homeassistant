@@ -9,6 +9,10 @@ To run it, copy or symlink `custom_components/evsemaster/` into a Home Assistant
 - Lint/format: `ruff check` / `ruff format` (config in `ruff.toml`, line-length 120)
 - Test: `pip install -r requirements_test.txt $(jq -r '.requirements[]' custom_components/evsemaster/manifest.json)`
   then `pytest` from the repo root. The library version lives only in `manifest.json`; don't pin it in `requirements_test.txt` too.
+- CI runs the suite twice: on the HA version `requirements_test.txt` pins, and on the `hacs.json` minimum (`target: floor`
+  in `ci.yaml`). `pytest-homeassistant` starts at HA 2026.11, so the floor runs on its predecessor
+  `pytest-homeassistant-custom-component`, and the tests import from whichever is installed. Never install both.
+  Raising `hacs.json` `homeassistant` means bumping the floor pin with it; at 2026.11 or later, drop the fallback.
 - Tests drive the integration end to end against `evsemaster.testing.FakeEvse` chargers on
   loopback (each on its own `127.0.0.x`), covering setup, two chargers at once, service
   targeting, unload, discovery and the config flow.

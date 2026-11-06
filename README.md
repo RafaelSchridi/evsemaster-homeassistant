@@ -21,22 +21,34 @@ Charger working and not on this list? [Report it here to help others!](https://g
 ## LAN Only
 If you only need basic control and are within bluetooth range, consider using the [bluetooth integration in home assistant](https://www.home-assistant.io/integrations/besen). This integration is for LAN control only.
 
+<!-- ha-marketplace:exclude-start -->
 ## Installation
-If you do not have HACS yet, [follow the official guide](https://hacs.xyz/docs/use/download/download/).
 
-### 1. Install with HACS
+Home Assistant 2026.11 and later have the Marketplace built in.
+
+[![Open your Home Assistant instance and open a repository in the Marketplace.](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=RafaelSchridi&repository=evsemaster-homeassistant&category=integration)
+
+Or: **Settings** → **Marketplace** → search for **EVSEMaster**.
+
+After the install, Home Assistant opens the setup dialog. No restart is needed.
+
+<details>
+<summary>Home Assistant 2026.3 to 2026.10: install with HACS</summary>
+
+If you do not have HACS yet, [follow the official guide](https://hacs.xyz/docs/use/download/download/).
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=RafaelSchridi&repository=evsemaster-homeassistant&category=integration)
 
 Or: **HACS** in the sidebar → search for **EVSEMaster**.
 
-Then click **Download** and restart Home Assistant.
-
-### 2. Add the integration
+Click **Download** and restart Home Assistant. Then add the integration:
 
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=evsemaster)
 
 Or: **Settings** → **Devices & Services** → **Add Integration** → search for **EVSEMaster**.
+
+</details>
+<!-- ha-marketplace:exclude-end -->
 
 ## Credits
 

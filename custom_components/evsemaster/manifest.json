@@ -1,6 +1,9 @@
 {
   "domain": "evsemaster",
   "name": "EVSEMaster",
+  "categories": [
+    "energy.ev_charging"
+  ],
   "codeowners": [
     "@RafaelSchridi"
   ],
@@ -19,5 +22,5 @@
   "requirements": [
     "evsemaster==3.0.0"
   ],
-  "version": "1.7.0"
+  "version": "1.7.1"
 }

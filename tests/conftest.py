@@ -1,5 +1,6 @@
 """Test setup."""
 
+import importlib.util
 import itertools
 import pathlib
 import sys
@@ -13,7 +14,9 @@ REPO = pathlib.Path(__file__).resolve().parent.parent
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
-pytest_plugins = "pytest_homeassistant_custom_component"
+if importlib.util.find_spec("pytest_homeassistant") is None:
+    # pytest-homeassistant starts at HA 2026.11, so the floor CI job runs on its predecessor.
+    pytest_plugins = "pytest_homeassistant_custom_component"
 
 
 @pytest.fixture(autouse=True)
