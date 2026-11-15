@@ -1,13 +1,13 @@
 start_charging:
-  name: Start Charging
+  name: Start charging
   description: Start charging with advanced parameters
   target:
     entity:
       integration: evsemaster
   fields:
     max_amps:
-      name: Maximum Amperage
-      description: Maximum charging amperage, Depends on device capabilities.
+      name: Maximum amperage
+      description: Maximum charging amperage. Depends on device capabilities.
       required: false
       selector:
         number:
@@ -16,13 +16,13 @@ start_charging:
           step: 1
           unit_of_measurement: "A"
     start_datetime:
-      name: Start Date/Time
+      name: Start date/time
       description: When to start charging (leave empty for immediate)
       required: false
       selector:
         datetime:
     duration_hours:
-      name: Duration (Hours)
+      name: Duration (hours)
       description: Maximum charging duration in hours (leave empty for unlimited)
       required: false
       selector:
@@ -32,7 +32,7 @@ start_charging:
           step: 1
           unit_of_measurement: "h"
 set_weekly_plan:
-  name: Set Weekly Plan
+  name: Set weekly plan
   description: >-
     Set the charger's weekly plan with one daily charge window on the chosen days, like the EVSEMaster app.
     A car plugged in during the window charges until it ends. Leave the days empty to turn the plan off.
@@ -57,13 +57,13 @@ set_weekly_plan:
             - saturday
             - sunday
     start_time:
-      name: Start Time
+      name: Start time
       description: When the window opens
       required: true
       selector:
         time:
     end_time:
-      name: End Time
+      name: End time
       description: >-
         When the window closes. If this is earlier than the start time, the window ends the next day. If it equals
         the start time, the window lasts 24 hours.
@@ -71,7 +71,7 @@ set_weekly_plan:
       selector:
         time:
 get_charge_history:
-  name: Get Charge History
+  name: Get charge history
   description: >-
     Read every charging session stored on the charger, newest first. The charger keeps up to 300 sessions but does not
     say which one is the newest, so the action reads all of them, one at a time. This takes a few minutes per

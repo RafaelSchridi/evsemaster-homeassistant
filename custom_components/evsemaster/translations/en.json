@@ -2,18 +2,18 @@
   "config": {
     "step": {
       "user": {
-        "title": "EVSEMaster Setup",
+        "title": "EVSEMaster setup",
         "description": "Set up your EVSEMaster EVSE charging station",
         "data": {
-          "host": "Host IP Address",
-          "password": "EVSE Password (6 digits)"
+          "host": "Host IP address",
+          "password": "EVSE password (6 digits)"
         }
       },
       "discovery_confirm": {
         "title": "EVSEMaster charger found",
         "description": "Set up {name} at {host}. Enter the password from the EVSEMaster app (default 123456).",
         "data": {
-          "password": "EVSE Password (6 digits)"
+          "password": "EVSE password (6 digits)"
         }
       }
     },
@@ -29,82 +29,82 @@
   "entity": {
     "sensor": {
       "current_state": {
-        "name": "Current State",
+        "name": "Current state",
         "state": {
-          "evse_fault": "EVSE Fault",
-          "charging_fault_2": "Charging Fault 2",
-          "charging_fault_3": "Charging Fault 3",
-          "waiting_for_swipe": "Waiting for Swipe",
-          "waiting_for_button": "Waiting for Button",
-          "not_connected": "Not Connected",
-          "ready_to_charge": "Ready to Charge",
+          "evse_fault": "EVSE fault",
+          "charging_fault_2": "Charging fault 2",
+          "charging_fault_3": "Charging fault 3",
+          "waiting_for_swipe": "Waiting for swipe",
+          "waiting_for_button": "Waiting for button",
+          "not_connected": "Not connected",
+          "ready_to_charge": "Ready to charge",
           "charging": "Charging",
           "completed": "Completed",
-          "completed_full_charge": "Completed Full Charge",
-          "charging_reservation": "Charging Reservation"
+          "completed_full_charge": "Completed full charge",
+          "charging_reservation": "Charging reservation"
         }
       },
       "current_power": {
-        "name": "Current Power"
+        "name": "Current power"
       },
       "plug_state": {
-        "name": "Plug State",
+        "name": "Plug state",
         "state": {
           "disconnected": "Disconnected",
-          "connected_unlocked": "Connected (Unlocked)",
-          "connected_locked": "Connected (Locked)"
+          "connected_unlocked": "Connected (unlocked)",
+          "connected_locked": "Connected (locked)"
         }
       },
       "inner_temperature": {
-        "name": "Inner Temperature"
+        "name": "Inner temperature"
       },
       "outer_temperature": {
-        "name": "Outer Temperature"
+        "name": "Outer temperature"
       },
       "total_kwh": {
-        "name": "Total Energy"
+        "name": "Total energy"
       },
       "charge_kwh": {
-        "name": "Session Energy"
+        "name": "Session energy"
       },
       "charge_duration": {
-        "name": "Session Duration"
+        "name": "Session duration"
       },
       "session_start_datetime": {
-        "name": "Session Start"
+        "name": "Session start"
       },
       "session_max_current": {
-        "name": "Session Max Current"
+        "name": "Session max current"
       },
       "reservation_datetime": {
-        "name": "Reservation Start"
+        "name": "Reservation start"
       },
       "reservation_duration": {
-        "name": "Reservation Duration"
+        "name": "Reservation duration"
       },
       "time_delta": {
-        "name": "Device Clock Offset"
+        "name": "Device clock offset"
       },
       "last_alive": {
-        "name": "Last Seen"
+        "name": "Last seen"
       },
       "l1_voltage": {
-        "name": "L1 Voltage"
+        "name": "L1 voltage"
       },
       "l2_voltage": {
-        "name": "L2 Voltage"
+        "name": "L2 voltage"
       },
       "l3_voltage": {
-        "name": "L3 Voltage"
+        "name": "L3 voltage"
       },
       "l1_current": {
-        "name": "L1 Current"
+        "name": "L1 current"
       },
       "l2_current": {
-        "name": "L2 Current"
+        "name": "L2 current"
       },
       "l3_current": {
-        "name": "L3 Current"
+        "name": "L3 current"
       },
       "fault": {
         "name": "Fault",
@@ -150,7 +150,7 @@
         }
       },
       "last_session_end": {
-        "name": "Last Session End",
+        "name": "Last session end",
         "state_attributes": {
           "start": {
             "name": "Start"
@@ -170,7 +170,7 @@
         }
       },
       "last_session_stop_reason": {
-        "name": "Last Session Stop Reason",
+        "name": "Last session stop reason",
         "state": {
           "reservation_cancelled": "Reservation cancelled",
           "home_assistant": "Stopped from Home Assistant",
@@ -183,7 +183,7 @@
         }
       },
       "weekly_plan": {
-        "name": "Weekly Plan",
+        "name": "Weekly plan",
         "state": {
           "on": "On",
           "off": "Off"
@@ -192,18 +192,18 @@
     },
     "binary_sensor": {
       "plug_state": {
-        "name": "Plug State"
+        "name": "Plug state"
       },
       "charging_state": {
-        "name": "Charging State"
+        "name": "Charging state"
       }
     },
     "button": {
       "start_charging": {
-        "name": "Start Charging"
+        "name": "Start charging"
       },
       "stop_charging": {
-        "name": "Stop Charging"
+        "name": "Stop charging"
       }
     },
     "text": {
@@ -213,12 +213,12 @@
     },
     "number": {
       "max_amps": {
-        "name": "Max Amps"
+        "name": "Max amps"
       }
     },
     "select": {
       "language": {
-        "name": "Display Language",
+        "name": "Display language",
         "state": {
           "english": "English",
           "italian": "Italian",

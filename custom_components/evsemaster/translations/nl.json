@@ -1,0 +1,281 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "EVSEMaster instellen",
+        "description": "Stel je EVSEMaster-laadpaal in",
+        "data": {
+          "host": "IP-adres van de laadpaal",
+          "password": "Wachtwoord van de laadpaal (6 cijfers)"
+        }
+      },
+      "discovery_confirm": {
+        "title": "EVSEMaster-laadpaal gevonden",
+        "description": "Stel {name} in op {host}. Voer het wachtwoord uit de EVSEMaster-app in (standaard 123456).",
+        "data": {
+          "password": "Wachtwoord van de laadpaal (6 cijfers)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Kan geen verbinding maken met de laadpaal",
+      "invalid_auth": "Ongeldig wachtwoord",
+      "unknown": "Er is een onverwachte fout opgetreden"
+    },
+    "abort": {
+      "already_configured": "Apparaat is al geconfigureerd"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "current_state": {
+        "name": "Huidige status",
+        "state": {
+          "evse_fault": "Laadpaalstoring",
+          "charging_fault_2": "Laadpaalstoring 2",
+          "charging_fault_3": "Laadpaalstoring 3",
+          "waiting_for_swipe": "Wachten op laadpas",
+          "waiting_for_button": "Wachten op knop",
+          "not_connected": "Niet verbonden",
+          "ready_to_charge": "Klaar om te laden",
+          "charging": "Laden",
+          "completed": "Voltooid",
+          "completed_full_charge": "Voltooid, volledig opgeladen",
+          "charging_reservation": "Gereserveerd"
+        }
+      },
+      "current_power": {
+        "name": "Huidig vermogen"
+      },
+      "plug_state": {
+        "name": "Stekkerstatus",
+        "state": {
+          "disconnected": "Losgekoppeld",
+          "connected_unlocked": "Verbonden (ontgrendeld)",
+          "connected_locked": "Verbonden (vergrendeld)"
+        }
+      },
+      "inner_temperature": {
+        "name": "Binnentemperatuur"
+      },
+      "outer_temperature": {
+        "name": "Buitentemperatuur"
+      },
+      "total_kwh": {
+        "name": "Totale energie"
+      },
+      "charge_kwh": {
+        "name": "Sessie-energie"
+      },
+      "charge_duration": {
+        "name": "Sessieduur"
+      },
+      "session_start_datetime": {
+        "name": "Starttijd sessie"
+      },
+      "session_max_current": {
+        "name": "Maximale laadstroom sessie"
+      },
+      "reservation_datetime": {
+        "name": "Start reservering"
+      },
+      "reservation_duration": {
+        "name": "Duur reservering"
+      },
+      "time_delta": {
+        "name": "Klokafwijking laadpaal"
+      },
+      "last_alive": {
+        "name": "Laatst gezien"
+      },
+      "l1_voltage": {
+        "name": "Spanning L1"
+      },
+      "l2_voltage": {
+        "name": "Spanning L2"
+      },
+      "l3_voltage": {
+        "name": "Spanning L3"
+      },
+      "l1_current": {
+        "name": "Stroom L1"
+      },
+      "l2_current": {
+        "name": "Stroom L2"
+      },
+      "l3_current": {
+        "name": "Stroom L3"
+      },
+      "fault": {
+        "name": "Storing",
+        "state": {
+          "relay_stuck_l1": "Relais zit vast (L1)",
+          "relay_stuck_l2": "Relais zit vast (L2)",
+          "relay_stuck_l3": "Relais zit vast (L3)",
+          "offline": "Offline",
+          "cc_error": "CC-fout",
+          "cp_error": "CP-fout",
+          "emergency_stop": "Noodstop",
+          "over_temperature_inner": "Te hoge temperatuur (binnen)",
+          "over_temperature_outer": "Te hoge temperatuur (buiten)",
+          "unknown_error": "Onbekende fout",
+          "leakage_protection": "Lekstroombeveiliging",
+          "short_circuit": "Kortsluiting",
+          "over_current": "Overstroom",
+          "not_grounded": "Niet geaard",
+          "over_voltage": "Overspanning",
+          "low_voltage": "Onderspanning",
+          "fault_16": "Storing 16",
+          "fault_17": "Storing 17",
+          "fault_18": "Storing 18",
+          "fault_19": "Storing 19",
+          "fault_20": "Storing 20",
+          "fault_21": "Storing 21",
+          "fault_22": "Storing 22",
+          "fault_23": "Storing 23",
+          "no_ventilation": "Geen ventilatie",
+          "input_power_error": "Fout in voedingsspanning",
+          "mains_overload": "Overbelasting stroomnet",
+          "diode_short_circuit": "Kortsluiting diode",
+          "rtc_failure": "Klok (RTC) defect",
+          "flash_failure": "Flashgeheugen defect",
+          "eeprom_failure": "EEPROM defect",
+          "metering_module_failure": "Meetmodule defect",
+          "none": "Geen storing"
+        },
+        "state_attributes": {
+          "faults": {
+            "name": "Storingen"
+          }
+        }
+      },
+      "last_session_end": {
+        "name": "Einde laatste sessie",
+        "state_attributes": {
+          "start": {
+            "name": "Start"
+          },
+          "started_by": {
+            "name": "Gestart door",
+            "state": {
+              "home_assistant": "Home Assistant",
+              "app": "EVSEMaster-app",
+              "plug_and_charge": "Inpluggen",
+              "schedule": "Weekplanning"
+            }
+          },
+          "charge_id": {
+            "name": "Laad-ID"
+          }
+        }
+      },
+      "last_session_stop_reason": {
+        "name": "Stopreden laatste sessie",
+        "state": {
+          "reservation_cancelled": "Reservering geannuleerd",
+          "home_assistant": "Gestopt vanuit Home Assistant",
+          "app": "Gestopt vanuit de EVSEMaster-app",
+          "auto_stop": "Automatisch gestopt",
+          "energy_limit": "Energielimiet bereikt",
+          "time_limit": "Tijdslimiet bereikt",
+          "unplugged": "Kabel losgekoppeld",
+          "power_loss": "Stroomuitval"
+        }
+      },
+      "weekly_plan": {
+        "name": "Weekplanning",
+        "state": {
+          "on": "Aan",
+          "off": "Uit"
+        }
+      }
+    },
+    "binary_sensor": {
+      "plug_state": {
+        "name": "Stekkerstatus"
+      },
+      "charging_state": {
+        "name": "Laadstatus"
+      }
+    },
+    "button": {
+      "start_charging": {
+        "name": "Laden starten"
+      },
+      "stop_charging": {
+        "name": "Laden stoppen"
+      }
+    },
+    "text": {
+      "nickname": {
+        "name": "Bijnaam"
+      }
+    },
+    "number": {
+      "max_amps": {
+        "name": "Maximale laadstroom"
+      }
+    },
+    "select": {
+      "language": {
+        "name": "Schermtaal",
+        "state": {
+          "english": "Engels",
+          "italian": "Italiaans",
+          "german": "Duits",
+          "french": "Frans",
+          "spanish": "Spaans",
+          "hebrew": "Hebreeuws",
+          "polish": "Pools",
+          "turkish": "Turks",
+          "chinese_traditional": "Chinees (traditioneel)"
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "not_responding": {
+      "message": "{device} reageert niet, opdracht is niet verstuurd."
+    },
+    "stop_failed": {
+      "message": "Kan het laden op {device} niet stoppen: de laadpaal reageert niet. De auto laadt mogelijk nog."
+    },
+    "nothing_to_stop": {
+      "message": "{device}: er is geen auto aangesloten en geen lading gepland, dus er is niets om te stoppen."
+    },
+    "no_car_connected": {
+      "message": "{device}: er is geen auto aangesloten, dus het laden kan niet starten. Gebruik de actie start_charging om een reservering te plannen."
+    },
+    "unsupported_operation": {
+      "message": "{device}: {error}"
+    },
+    "invalid_value": {
+      "message": "{device} heeft de waarde geweigerd: {error}"
+    },
+    "reservation_too_far": {
+      "message": "{device}: een reservering kan niet later dan 24 uur starten."
+    },
+    "max_amps_above_limit": {
+      "message": "{device} ondersteunt maximaal {limit} A; er is {max_amps} A gevraagd."
+    },
+    "no_matching_charger": {
+      "message": "Geen EVSEMaster-laadpaal komt overeen met het doel van deze actie."
+    },
+    "action_failed": {
+      "message": "De actie is niet op elke laadpaal gelukt: {errors}"
+    }
+  },
+  "selector": {
+    "weekday": {
+      "options": {
+        "monday": "Maandag",
+        "tuesday": "Dinsdag",
+        "wednesday": "Woensdag",
+        "thursday": "Donderdag",
+        "friday": "Vrijdag",
+        "saturday": "Zaterdag",
+        "sunday": "Zondag"
+      }
+    }
+  }
+}
