@@ -15,6 +15,7 @@ The underlying implementation is factored out to a separate Python package: http
 - Telestar EC311S & EC311S6
 - [Besen B20](https://github.com/RafaelSchridi/evsemaster-homeassistant/issues/1)
 - [Morec MC20CAPP / MC20AAPP](https://github.com/RafaelSchridi/evsemaster-homeassistant/issues/9)
+- LEFANEV LF-F30
 
 Charger working and not on this list? [Report it here to help others!](https://github.com/RafaelSchridi/evsemaster-homeassistant/issues/new?template=working-device.yml)
 
