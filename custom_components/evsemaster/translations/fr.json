@@ -1,0 +1,281 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Menu EVSEMaster",
+        "description": "Installez votre borne de recharge EVSEMaster",
+        "data": {
+          "host": "Adresse IP de l'hôte",
+          "password": "Mot de passe EVSE (6 digits)"
+        }
+      },
+      "discovery_confirm": {
+        "title": "Chargeur EVSEMaster détecté",
+        "description": "Configuration {name} à {host}. Saisissez le mot de passe de l'application EVSEMaster (par défaut 123456).",
+        "data": {
+          "password": "Mot de passe EVSE (6 digits)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Échec de la connexion à l'EVSE",
+      "invalid_auth": "Mot de passe incorrect",
+      "unknown": "Une erreur inattendue s'est produite"
+    },
+    "abort": {
+      "already_configured": "L'appareil est déjà configuré"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "current_state": {
+        "name": "Etat actuel",
+        "state": {
+          "evse_fault": "Défaut de l'EVSE",
+          "charging_fault_2": "Erreur de charge n° 2",
+          "charging_fault_3": "Erreur de charge n° 3",
+          "waiting_for_swipe": "En attente de réponse",
+          "waiting_for_button": "En attente du bouton",
+          "not_connected": "Non connecté",
+          "ready_to_charge": "Prêt à se recharger",
+          "charging": "Charge en cours",
+          "completed": "Terminé",
+          "completed_full_charge": "Recharge complète effectuée",
+          "charging_reservation": "Réservation de recharge"
+        }
+      },
+      "current_power": {
+        "name": "Puissance électrique"
+      },
+      "plug_state": {
+        "name": "État de la prise",
+        "state": {
+          "disconnected": "Déconnecté",
+          "connected_unlocked": "Connecté (Déverrouillé)",
+          "connected_locked": "Connecté (Verrouillé)"
+        }
+      },
+      "inner_temperature": {
+        "name": "Température interne"
+      },
+      "outer_temperature": {
+        "name": "Température extérieure"
+      },
+      "total_kwh": {
+        "name": "Énergie totale"
+      },
+      "charge_kwh": {
+        "name": "Énergie de session"
+      },
+      "charge_duration": {
+        "name": "Durée de la session"
+      },
+      "session_start_datetime": {
+        "name": "Début de la session"
+      },
+      "session_max_current": {
+        "name": "Courant maximal de la session"
+      },
+      "reservation_datetime": {
+        "name": "Heure de début"
+      },
+      "reservation_duration": {
+        "name": "Durée de fonctionnement"
+      },
+      "time_delta": {
+        "name": "Décalage de l'horloge du périphérique"
+      },
+      "last_alive": {
+        "name": "Dernière connexion"
+      },
+      "l1_voltage": {
+        "name": "Tension L1"
+      },
+      "l2_voltage": {
+        "name": "Tension L2"
+      },
+      "l3_voltage": {
+        "name": "Tension L3"
+      },
+      "l1_current": {
+        "name": "Courant L1"
+      },
+      "l2_current": {
+        "name": "Courant L2"
+      },
+      "l3_current": {
+        "name": "Courant L3"
+      },
+      "fault": {
+        "name": "Défaut",
+        "state": {
+          "relay_stuck_l1": "Relais bloqué (L1)",
+          "relay_stuck_l2": "Relais bloqué (L2)",
+          "relay_stuck_l3": "Relais bloqué (L3)",
+          "offline": "Hors ligne",
+          "cc_error": "Erreur CC",
+          "cp_error": "Erreur CP",
+          "emergency_stop": "Arrêt d'urgence",
+          "over_temperature_inner": "Surchauffe (à l'intérieur)",
+          "over_temperature_outer": "Surchauffe (à l'extérieur)",
+          "unknown_error": "Erreur inconnue",
+          "leakage_protection": "Protection contre les courants de fuite à la terre",
+          "short_circuit": "Court-circuit",
+          "over_current": "Surintensité",
+          "not_grounded": "Non raccordé à la terre",
+          "over_voltage": "Surtension",
+          "low_voltage": "Tension Basse",
+          "fault_16": "Erreur 16",
+          "fault_17": "Erreur 17",
+          "fault_18": "Erreur 18",
+          "fault_19": "Erreur 19",
+          "fault_20": "Erreur 20",
+          "fault_21": "Erreur 21",
+          "fault_22": "Erreur 22",
+          "fault_23": "Erreur 23",
+          "no_ventilation": "Pas de ventilation",
+          "input_power_error": "Erreur d'alimentation",
+          "mains_overload": "Surcharge du réseau électrique",
+          "diode_short_circuit": "Court-circuit d'une diode",
+          "rtc_failure": "Panne de l'horloge (RTC)",
+          "flash_failure": "Défaillance de la mémoire flash",
+          "eeprom_failure": "Défaillance de l'EEPROM",
+          "metering_module_failure": "Défaillance du module de mesure",
+          "none": "aucune anomalie"
+        },
+        "state_attributes": {
+          "faults": {
+            "name": "Défauts"
+          }
+        }
+      },
+      "last_session_end": {
+        "name": "Fin de la dernière session",
+        "state_attributes": {
+          "start": {
+            "name": "Démarrer"
+          },
+          "started_by": {
+            "name": "Démarré par",
+            "state": {
+              "home_assistant": "Home Assistant",
+              "app": "EVSEMaster app",
+              "plug_and_charge": "Branchement direct",
+              "schedule": "Programme hebdomadaire"
+            }
+          },
+          "charge_id": {
+            "name": "Chargeur ID"
+          }
+        }
+      },
+      "last_session_stop_reason": {
+        "name": "Dernière session – Motif de l'arrêt",
+        "state": {
+          "reservation_cancelled": "Programmation annulée",
+          "home_assistant": "Arrêté depuis Home Assistant",
+          "app": "Arrêté depuis l'application EVSEMaster",
+          "auto_stop": "Arrêt automatique",
+          "energy_limit": "Limite d'énergie atteinte",
+          "time_limit": "Le délai est écoulé",
+          "unplugged": "Câble débranché",
+          "power_loss": "Perte de puissance"
+        }
+      },
+      "weekly_plan": {
+        "name": "Programme hebdomadaire",
+        "state": {
+          "on": "On",
+          "off": "Off"
+        }
+      }
+    },
+    "binary_sensor": {
+      "plug_state": {
+        "name": "État de la prise"
+      },
+      "charging_state": {
+        "name": "État de charge"
+      }
+    },
+    "button": {
+      "start_charging": {
+        "name": "Lancer la charge"
+      },
+      "stop_charging": {
+        "name": "Arrêter la charge"
+      }
+    },
+    "text": {
+      "nickname": {
+        "name": "Surnom"
+      }
+    },
+    "number": {
+      "max_amps": {
+        "name": "Amps Max"
+      }
+    },
+    "select": {
+      "language": {
+        "name": "Langue d'affichage",
+        "state": {
+          "english": "English",
+          "italian": "Italian",
+          "german": "German",
+          "french": "French",
+          "spanish": "Spanish",
+          "hebrew": "Hebrew",
+          "polish": "Polish",
+          "turkish": "Turkish",
+          "chinese_traditional": "Chinese (Traditional)"
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "not_responding": {
+      "message": "{device} ne répond pas, la commande n'a donc pas été envoyée."
+    },
+    "stop_failed": {
+      "message": "Impossible d'arrêter la charge sur {device}: Le chargeur ne répond pas. Il se peut que la voiture soit encore en cours de recharge.."
+    },
+    "nothing_to_stop": {
+      "message": "{device}: aucune voiture n'est connectée et aucune recharge n'est programmée, il n'y a donc rien qui puisse démarrer."
+    },
+    "no_car_connected": {
+      "message": "{device}: Aucune voiture n'est connectée ; la recharge ne peut donc pas démarrer. Utilisez l'action « Démarrer » pour programmer une réservation."
+    },
+    "unsupported_operation": {
+      "message": "{device}: {error}"
+    },
+    "invalid_value": {
+      "message": "{device} renvoie la valeur: {error}"
+    },
+    "reservation_too_far": {
+      "message": "{device}: une programation ne peut pas débuter dans plus de 24 heures à compter de maintenant."
+    },
+    "max_amps_above_limit": {
+      "message": "{device} prend en charge au maximum {limit} A; {max_amps} A a été demandé."
+    },
+    "no_matching_charger": {
+      "message": "Aucun chargeur EVSEMaster ne correspondait à l'objectif de cette action.."
+    },
+    "action_failed": {
+      "message": "Cette opération n'a pas fonctionné sur le chargeur: {errors}"
+    }
+  },
+  "selector": {
+    "weekday": {
+      "options": {
+        "monday": "Lundi",
+        "tuesday": "Mardi",
+        "wednesday": "Mercredi",
+        "thursday": "Jeudi",
+        "friday": "Vendredi",
+        "saturday": "Samedi",
+        "sunday": "Dimanche"
+      }
+    }
+  }
+}
