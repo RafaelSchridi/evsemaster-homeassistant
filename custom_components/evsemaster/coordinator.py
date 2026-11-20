@@ -27,17 +27,16 @@ from homeassistant.const import CONF_HOST, CONF_PASSWORD
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.event import async_track_utc_time_change
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 from pydantic import ValidationError
 
 from .const import DOMAIN
 from .hub import async_get_listener
 
 _LOGGER = logging.getLogger(__name__)
-
-ESSENTIALS_INTERVAL = timedelta(minutes=30)
 
 
 def record_store(hass: HomeAssistant, entry: ConfigEntry) -> Store:
@@ -83,9 +82,13 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
             except ValidationError:
                 _LOGGER.debug("Dropping a stored session this library version cannot read")
         listener = await async_get_listener(self.hass)
-        self.device = await listener.async_add_device(self.host, self.password, on_event=self._on_protocol_event)
-        self._unsub_essentials = async_track_time_interval(
-            self.hass, self._async_refresh_essentials, ESSENTIALS_INTERVAL
+        self.device = await listener.async_add_device(
+            self.host, self.password, on_event=self._on_protocol_event, tz=dt_util.get_default_time_zone()
+        )
+        # request_essentials writes the clock. Every DST switch falls on :00 or :30 UTC, and HA fires 50-500 ms
+        # after that second, so the write lands just after a switch, never before it
+        self._unsub_essentials = async_track_utc_time_change(
+            self.hass, self._async_refresh_essentials, minute=(0, 30), second=0
         )
 
     @property
@@ -252,7 +255,7 @@ class EVSEMasterDataUpdateCoordinator(DataUpdateCoordinator):
             if isinstance(start_datetime, str):
                 start_datetime = datetime.fromisoformat(start_datetime)
             if start_datetime and start_datetime.tzinfo is None:
-                start_datetime = start_datetime.replace(tzinfo=now_aware().tzinfo)
+                start_datetime = start_datetime.replace(tzinfo=dt_util.get_default_time_zone())
             if start_datetime and start_datetime > now_aware() + timedelta(hours=24):
                 raise ServiceValidationError(
                     translation_domain=DOMAIN,

@@ -20,7 +20,7 @@
   ],
   "quality_scale": "bronze",
   "requirements": [
-    "evsemaster==3.0.0"
+    "evsemaster==3.1.0"
   ],
-  "version": "1.7.1"
+  "version": "1.7.2"
 }

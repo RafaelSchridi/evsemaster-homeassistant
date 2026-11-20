@@ -23,10 +23,16 @@ except ImportError:  # the floor CI job, see conftest.py
     from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
 from custom_components.evsemaster.const import DOMAIN, WEEKDAYS
-from custom_components.evsemaster.coordinator import ESSENTIALS_INTERVAL, record_store
+from custom_components.evsemaster.coordinator import record_store
 
 SERIAL_A = "aa" * 8
 SERIAL_B = "bb" * 8
+
+
+def next_half_hour():
+    """The next :00 or :30, when the essentials refresh runs."""
+    now = dt_util.utcnow().replace(second=0, microsecond=0)
+    return now + timedelta(minutes=30 - now.minute % 30)
 
 
 async def settle(hass, seconds=1.0):
@@ -133,7 +139,7 @@ async def test_single_charger_sets_up_with_entities(hass, evse_a):
     # the registry follows model and nickname, which land after the device is created
     assert device.name == "BS20 Garage"
     # has_entity_name prefixes it, so the device name is what every friendly name carries
-    assert hass.states.get(ids[f"{SERIAL_A}_current_state"]).name == "BS20 Garage Current State"
+    assert hass.states.get(ids[f"{SERIAL_A}_current_state"]).name == "BS20 Garage Current state"
 
 
 async def test_a_failing_stop_surfaces_in_home_assistant(hass, evse_a):
@@ -486,8 +492,8 @@ async def test_wrong_password_is_reported_as_invalid_auth(hass, evse_a):
     assert result["type"] == "form" and result["errors"] == {"base": "invalid_auth"}
 
 
-async def test_essentials_are_refreshed_on_the_long_interval(hass, evse_a):
-    """Nickname and configured amps are re-read every 30 minutes, even while pushes keep the poll asleep."""
+async def test_essentials_are_refreshed_on_the_half_hour(hass, evse_a):
+    """Nickname, configured amps and the clock are refreshed at :00 and :30, even while pushes keep the poll asleep."""
     entry, ok = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
     assert ok
 
@@ -497,10 +503,28 @@ async def test_essentials_are_refreshed_on_the_long_interval(hass, evse_a):
     await settle(hass)
     assert CommandEnum.NICKNAME_REQUEST not in evse_a.received
 
-    async_fire_time_changed(hass, dt_util.utcnow() + ESSENTIALS_INTERVAL + timedelta(seconds=1))
+    async_fire_time_changed(hass, next_half_hour())
     await settle(hass)
     assert CommandEnum.NICKNAME_REQUEST in evse_a.received
     assert CommandEnum.OUTPUT_AMPERAGE_REQUEST in evse_a.received
+    assert CommandEnum.SYSTEM_TIME_REQUEST in evse_a.received
+
+
+async def test_a_naive_start_time_is_read_in_the_home_assistant_zone(hass, evse_a):
+    """HA's zone, not the host's: the two differ in a container left on UTC."""
+    await hass.config.async_set_time_zone("Asia/Kolkata")
+    entry, ok = await add_entry(hass, "127.0.0.1", unique_id=SERIAL_A)
+    assert ok
+
+    start = (dt_util.now() + timedelta(hours=2)).replace(tzinfo=None, second=0, microsecond=0)
+    await hass.services.async_call(
+        DOMAIN,
+        "start_charging",
+        {"device_id": device_for(hass, entry).id, "start_datetime": start.isoformat()},
+        blocking=True,
+    )
+    assert await until(hass, lambda: CommandEnum.CHARGE_START_REQUEST in evse_a.payloads)
+    assert evse_a.payloads[CommandEnum.CHARGE_START_REQUEST][17:29].decode() == start.strftime("%Y%m%d%H%M")
 
 
 async def test_debug_logging_reaches_the_library(hass):
@@ -521,7 +545,7 @@ async def test_a_user_rename_survives_a_nickname_change(hass, evse_a):
     await hass.async_block_till_done()
 
     evse_a.nickname = "Driveway"
-    async_fire_time_changed(hass, dt_util.utcnow() + ESSENTIALS_INTERVAL + timedelta(seconds=1))
+    async_fire_time_changed(hass, next_half_hour())
     await settle(hass)
 
     device = device_for(hass, entry)
@@ -529,7 +553,7 @@ async def test_a_user_rename_survives_a_nickname_change(hass, evse_a):
     assert device.name_by_user == "Rafael's charger", "a user rename must not be overwritten"
     # and the user's name is what the entities actually display
     ids = entity_ids(hass, entry)
-    assert hass.states.get(ids[f"{SERIAL_A}_current_state"]).name == "Rafael's charger Current State"
+    assert hass.states.get(ids[f"{SERIAL_A}_current_state"]).name == "Rafael's charger Current state"
 
 
 async def test_the_fault_sensor_names_every_fault(hass):
